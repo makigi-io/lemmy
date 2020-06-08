@@ -348,21 +348,19 @@ export class Main extends Component<any, MainState> {
     return (
       <div class="card border-secondary">
         <div class="card-body">
-          <h5>
-            {i18n.t('powered_by')}
-            <svg class="icon mx-2">
-              <use xlinkHref="#icon-mouse">#</use>
-            </svg>
-            <a href={repoUrl}>
-              Lemmy<sup>beta</sup>
-            </a>
+          <h5 class="text-center mb-4">
+            <span class="font-weight-bold">Makigi</span>
+            <sup class="ml-1">network</sup>
           </h5>
+          <p class="mb-4">
+            <T i18nKey="landing_1">
+              <a href="https://board.makigi.io">board.makigi.io</a>
+            </T>
+          </p>
+          <div class="border-top my-3"></div>
           <p class="mb-0">
-            <T i18nKey="landing_0">
-              #
-              <a href="https://en.wikipedia.org/wiki/Social_network_aggregation">
-                #
-              </a>
+            <T i18nKey="landing_2">
+              #<a href="https://github.com/makigi-io/makigi">#</a>
               <a href="https://en.wikipedia.org/wiki/Fediverse">#</a>
               <br></br>
               <code>#</code>
@@ -375,6 +373,7 @@ export class Main extends Component<any, MainState> {
               <a href="https://actix.rs/">#</a>
               <a href="https://infernojs.org">#</a>
               <a href="https://www.typescriptlang.org/">#</a>
+              <a href="https://beta.makigi.io">#</a>
             </T>
           </p>
         </div>

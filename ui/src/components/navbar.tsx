@@ -169,6 +169,7 @@ export class Navbar extends Component<any, NavbarState> {
                 {i18n.t('create_community')}
               </Link>
             </li>
+            {/*
             <li className="nav-item">
               <Link
                 class="nav-link"
@@ -180,6 +181,7 @@ export class Navbar extends Component<any, NavbarState> {
                 </svg>
               </Link>
             </li>
+            */}
           </ul>
           <ul class="navbar-nav ml-auto">
             {this.canAdmin && (
@@ -381,7 +383,7 @@ export class Navbar extends Component<any, NavbarState> {
 
   requestNotificationPermission() {
     if (UserService.Instance.user) {
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', function () {
         if (!Notification) {
           toast(i18n.t('notifications_error'), 'danger');
           return;

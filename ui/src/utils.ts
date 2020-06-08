@@ -53,7 +53,7 @@ import Toastify from 'toastify-js';
 import tippy from 'tippy.js';
 import EmojiButton from '@joeattardi/emoji-button';
 
-export const repoUrl = 'https://github.com/LemmyNet/lemmy';
+export const repoUrl = 'https://github.com/makigi-io/makigi';
 export const helpGuideUrl = '/docs/about_guide.html';
 export const markdownHelpUrl = `${helpGuideUrl}#markdown-guide`;
 export const sortingHelpUrl = `${helpGuideUrl}#sorting`;
