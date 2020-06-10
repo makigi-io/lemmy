@@ -20,7 +20,17 @@ export class Footer extends Component<any, any> {
             </li>
             */}
             <li class="nav-item">
-              <Link class="nav-link" to="/modlog">
+              <a class="nav-link" href="https://board.makigi.io/terms">
+                Regulamin
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://board.makigi.io/privacy-policy">
+                Polityka prywatności
+              </a>
+            </li>
+            <li class="nav-item">
+              <Link class="nav-link" href="/modlog">
                 {i18n.t('modlog')}
               </Link>
             </li>
