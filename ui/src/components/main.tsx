@@ -352,13 +352,12 @@ export class Main extends Component<any, MainState> {
             <span class="font-weight-bold">Makigi</span>
             <sup class="ml-1">network</sup>
           </h5>
-          <p class="mb-4">
+          <p class="mb-4 small">
             <T i18nKey="landing_1">
               <a href="https://board.makigi.io">board.makigi.io</a>
             </T>
           </p>
-          <div class="border-top my-3"></div>
-          <p class="mb-0">
+          <p class="mb-0 small">
             <T i18nKey="landing_2">
               #<a href="https://github.com/makigi-io/makigi">#</a>
               <a href="https://en.wikipedia.org/wiki/Fediverse">#</a>
