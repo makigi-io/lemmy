@@ -13,15 +13,15 @@
   # settings related to the postgresql database
   database: {
     # username to connect to postgres
-    user: "lemmy"
+    user: "makigi"
     # password to connect to postgres
-    password: "password"
+    password: "fnDxK91Y3qFOAOWdY"
     # host where postgres is running
     host: "localhost"
     # port where postgres can be accessed
     port: 5432
     # name of the postgres database for lemmy
-    database: "lemmy"
+    database: "makigi"
     # maximum number of active sql connections
     pool_size: 5
   }

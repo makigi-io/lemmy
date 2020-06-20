@@ -131,7 +131,7 @@ export class CommunityForm extends Component<
                 required
                 minLength={3}
                 maxLength={20}
-                pattern="[a-z0-9_]+"
+                pattern="^([a-z]+((\d)|([A-Z0-9][a-z0-9]+))*([A-Z])?){3,20}$"
                 title={i18n.t('community_reqs')}
               />
             </div>
