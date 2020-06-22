@@ -26,6 +26,7 @@
     "trending_communities": "Popularne <1>społeczności</1>",
     "list_of_communities": "Lista społeczności",
     "community_reqs": "małe litery, camelCase, bez spacji.",
+    "invalid_community_name": "Nieprawidłowa nazwa.",
     "create_private_message": "Stwórz Prywatną Wiadomość",
     "send_secure_message": "Wyślij Bezpieczną Wiadomość",
     "send_message": "Wyślij Wiadomość",
