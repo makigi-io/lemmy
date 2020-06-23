@@ -413,6 +413,10 @@ export function setTheme(theme: string = 'darkly', loggedIn: boolean = false) {
     }
   }
 
+  // if the user is not logged in, we load the default themes and let the browser decide
+  document.getElementById('default-light').setAttribute('disabled', 'disabled');
+  document.getElementById('default-dark').setAttribute('disabled', 'disabled');
+
   // Load the theme dynamically
   let cssLoc = `/static/assets/css/themes/${theme}.min.css`;
   loadCss(theme, cssLoc);
