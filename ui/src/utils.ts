@@ -113,11 +113,26 @@ export const emojiPicker = new EmojiButton({
   // TODO i18n
 });
 
-export function randomStr() {
-  return Math.random()
-    .toString(36)
-    .replace(/[^a-z]+/g, '')
-    .substr(2, 10);
+const DEFAULT_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+function getRandomCharFromAlphabet(alphabet: string): string {
+  return alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+}
+
+export function randomStr(
+  idDesiredLength: number = 20,
+  alphabet = DEFAULT_ALPHABET
+): string {
+  /**
+   * Create n-long array and map it to random chars from given alphabet.
+   * Then join individual chars as string
+   */
+  return Array.from({ length: idDesiredLength })
+    .map(() => {
+      return getRandomCharFromAlphabet(alphabet);
+    })
+    .join('');
 }
 
 export function wsJsonToRes(msg: WebSocketJsonResponse): WebSocketResponse {
@@ -502,7 +517,7 @@ export function pictrsDeleteToast(
     backgroundColor: backgroundColor,
     gravity: 'top',
     position: 'right',
-    duration: 0,
+    duration: 10000,
     onClick: () => {
       if (toast) {
         window.location.replace(deleteUrl);
@@ -531,7 +546,7 @@ export function messageToastify(
     close: true,
     gravity: 'top',
     position: 'right',
-    duration: 0,
+    duration: 5000,
     onClick: () => {
       if (toast) {
         toast.hideToast();
