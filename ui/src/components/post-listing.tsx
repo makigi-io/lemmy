@@ -20,6 +20,7 @@ import { MomentTime } from './moment-time';
 import { PostForm } from './post-form';
 import { IFramelyCard } from './iframely-card';
 import { UserListing } from './user-listing';
+import { CommunityLink } from './community-link';
 import {
   md,
   mdToHtml,
@@ -30,6 +31,7 @@ import {
   getUnixTime,
   pictrsImage,
   setupTippy,
+  hostname,
   previewLines,
 } from '../utils';
 import { i18n } from '../i18next';
@@ -314,22 +316,21 @@ export class PostListing extends Component<PostListingProps, PostListingState> {
                     </Link>
                   )}
                 </h5>
-                {post.url &&
-                  !(new URL(post.url).hostname == window.location.hostname) && (
-                    <small class="d-inline-block">
-                      <a
-                        className="ml-2 text-muted font-italic"
-                        href={post.url}
-                        target="_blank"
-                        title={post.url}
-                      >
-                        {new URL(post.url).hostname}
-                        <svg class="ml-1 icon icon-inline">
-                          <use xlinkHref="#icon-external-link"></use>
-                        </svg>
-                      </a>
-                    </small>
-                  )}
+                {post.url && !(hostname(post.url) == window.location.hostname) && (
+                  <small class="d-inline-block">
+                    <a
+                      className="ml-2 text-muted font-italic"
+                      href={post.url}
+                      target="_blank"
+                      title={post.url}
+                    >
+                      {hostname(post.url)}
+                      <svg class="ml-1 icon icon-inline">
+                        <use xlinkHref="#icon-external-link"></use>
+                      </svg>
+                    </a>
+                  </small>
+                )}
                 {(isImage(post.url) || this.props.post.thumbnail_url) && (
                   <>
                     {!this.state.imageExpanded ? (
@@ -422,6 +423,9 @@ export class PostListing extends Component<PostListingProps, PostListingState> {
                     user={{
                       name: post.creator_name,
                       avatar: post.creator_avatar,
+                      id: post.creator_id,
+                      local: post.creator_local,
+                      actor_id: post.creator_actor_id,
                     }}
                   />
                   {this.isMod && (
@@ -442,9 +446,14 @@ export class PostListing extends Component<PostListingProps, PostListingState> {
                   {this.props.showCommunity && (
                     <span>
                       <span> {i18n.t('to')} </span>
-                      <Link to={`/c/${post.community_name}`}>
-                        {post.community_name}
-                      </Link>
+                      <CommunityLink
+                        community={{
+                          name: post.community_name,
+                          id: post.community_id,
+                          local: post.community_local,
+                          actor_id: post.community_actor_id,
+                        }}
+                      />
                     </span>
                   )}
                 </li>

@@ -1,11 +1,28 @@
-use super::*;
-use crate::db::comment_view::{ReplyQueryBuilder, ReplyView};
-use crate::db::community::Community;
-use crate::db::post_view::{PostQueryBuilder, PostView};
-use crate::db::site_view::SiteView;
-use crate::db::user::{Claims, User_};
-use crate::db::user_mention_view::{UserMentionQueryBuilder, UserMentionView};
-use crate::db::{ListingType, SortType};
+use crate::{
+  db::{
+    comment_view::{ReplyQueryBuilder, ReplyView},
+    community::Community,
+    post_view::{PostQueryBuilder, PostView},
+    site_view::SiteView,
+    user::{Claims, User_},
+    user_mention_view::{UserMentionQueryBuilder, UserMentionView},
+    ListingType,
+    SortType,
+  },
+  markdown_to_html,
+  routes::DbPoolParam,
+  settings::Settings,
+};
+use actix_web::{error::ErrorBadRequest, *};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
+use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, Item, ItemBuilder};
+use serde::Deserialize;
+use std::str::FromStr;
+use strum::ParseError;
 
 #[derive(Deserialize)]
 pub struct Params {
@@ -21,14 +38,11 @@ enum RequestType {
 
 pub fn config(cfg: &mut web::ServiceConfig) {
   cfg
-    .route("/feeds/{type}/{name}.xml", web::get().to(feeds::get_feed))
-    .route("/feeds/all.xml", web::get().to(feeds::get_all_feed));
+    .route("/feeds/{type}/{name}.xml", web::get().to(get_feed))
+    .route("/feeds/all.xml", web::get().to(get_all_feed));
 }
 
-async fn get_all_feed(
-  info: web::Query<Params>,
-  db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-) -> Result<HttpResponse, Error> {
+async fn get_all_feed(info: web::Query<Params>, db: DbPoolParam) -> Result<HttpResponse, Error> {
   let res = web::block(move || {
     let conn = db.get()?;
     get_feed_all_data(&conn, &get_sort_type(info)?)
@@ -144,8 +158,7 @@ fn get_feed_community(
   community_name: String,
 ) -> Result<ChannelBuilder, failure::Error> {
   let site_view = SiteView::read(&conn)?;
-  let community = Community::read_from_name(&conn, community_name)?;
-  let community_url = community.get_url();
+  let community = Community::read_from_name(&conn, &community_name)?;
 
   let posts = PostQueryBuilder::create(&conn)
     .listing_type(ListingType::All)
@@ -158,7 +171,7 @@ fn get_feed_community(
   let mut channel_builder = ChannelBuilder::default();
   channel_builder
     .title(&format!("{} - {}", site_view.name, community.name))
-    .link(community_url)
+    .link(community.actor_id)
     .items(items);
 
   if let Some(community_desc) = community.description {

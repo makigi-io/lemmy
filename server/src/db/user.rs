@@ -1,16 +1,20 @@
-use super::*;
-use crate::schema::user_;
-use crate::schema::user_::dsl::*;
-use crate::{is_email_regex, Settings};
+use crate::{
+  db::Crud,
+  is_email_regex,
+  naive_now,
+  schema::{user_, user_::dsl::*},
+  settings::Settings,
+};
 use bcrypt::{hash, DEFAULT_COST};
+use diesel::{dsl::*, result::Error, *};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug)]
 #[table_name = "user_"]
 pub struct User_ {
   pub id: i32,
   pub name: String,
-  pub fedi_name: String,
   pub preferred_username: Option<String>,
   pub password_encrypted: String,
   pub email: Option<String>,
@@ -27,13 +31,18 @@ pub struct User_ {
   pub show_avatars: bool,
   pub send_notifications_to_email: bool,
   pub matrix_user_id: Option<String>,
+  pub actor_id: String,
+  pub bio: Option<String>,
+  pub local: bool,
+  pub private_key: Option<String>,
+  pub public_key: Option<String>,
+  pub last_refreshed_at: chrono::NaiveDateTime,
 }
 
-#[derive(Insertable, AsChangeset, Clone)]
+#[derive(Insertable, AsChangeset, Clone, Debug)]
 #[table_name = "user_"]
 pub struct UserForm {
   pub name: String,
-  pub fedi_name: String,
   pub preferred_username: Option<String>,
   pub password_encrypted: String,
   pub admin: bool,
@@ -49,6 +58,12 @@ pub struct UserForm {
   pub show_avatars: bool,
   pub send_notifications_to_email: bool,
   pub matrix_user_id: Option<String>,
+  pub actor_id: String,
+  pub bio: Option<String>,
+  pub local: bool,
+  pub private_key: Option<String>,
+  pub public_key: Option<String>,
+  pub last_refreshed_at: Option<chrono::NaiveDateTime>,
 }
 
 impl Crud<UserForm> for User_ {
@@ -78,6 +93,7 @@ impl User_ {
     Self::create(&conn, &edited_user)
   }
 
+  // TODO do more individual updates like these
   pub fn update_password(
     conn: &PgConnection,
     user_id: i32,
@@ -86,12 +102,32 @@ impl User_ {
     let password_hash = hash(new_password, DEFAULT_COST).expect("Couldn't hash password");
 
     diesel::update(user_.find(user_id))
-      .set(password_encrypted.eq(password_hash))
+      .set((
+        password_encrypted.eq(password_hash),
+        updated.eq(naive_now()),
+      ))
       .get_result::<Self>(conn)
   }
 
-  pub fn read_from_name(conn: &PgConnection, from_user_name: String) -> Result<Self, Error> {
+  pub fn read_from_name(conn: &PgConnection, from_user_name: &str) -> Result<Self, Error> {
     user_.filter(name.eq(from_user_name)).first::<Self>(conn)
+  }
+
+  pub fn add_admin(conn: &PgConnection, user_id: i32, added: bool) -> Result<Self, Error> {
+    diesel::update(user_.find(user_id))
+      .set(admin.eq(added))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn ban_user(conn: &PgConnection, user_id: i32, ban: bool) -> Result<Self, Error> {
+    diesel::update(user_.find(user_id))
+      .set(banned.eq(ban))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn read_from_actor_id(conn: &PgConnection, object_id: &str) -> Result<Self, Error> {
+    use crate::schema::user_::dsl::*;
+    user_.filter(actor_id.eq(object_id)).first::<Self>(conn)
   }
 }
 
@@ -129,7 +165,7 @@ impl User_ {
     let my_claims = Claims {
       id: self.id,
       username: self.name.to_owned(),
-      iss: self.fedi_name.to_owned(),
+      iss: Settings::get().hostname,
       show_nsfw: self.show_nsfw,
       theme: self.theme.to_owned(),
       default_sort_type: self.default_sort_type,
@@ -177,8 +213,8 @@ impl User_ {
 
 #[cfg(test)]
 mod tests {
-  use super::User_;
-  use super::*;
+  use super::{User_, *};
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
 
   #[test]
   fn test_crud() {
@@ -186,7 +222,6 @@ mod tests {
 
     let new_user = UserForm {
       name: "thommy".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -202,6 +237,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -209,7 +250,6 @@ mod tests {
     let expected_user = User_ {
       id: inserted_user.id,
       name: "thommy".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -226,6 +266,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: inserted_user.published,
     };
 
     let read_user = User_::read(&conn, inserted_user.id).unwrap();

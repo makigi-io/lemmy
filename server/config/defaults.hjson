@@ -26,18 +26,15 @@
     pool_size: 5
   }
   # the domain name of your instance (eg "dev.lemmy.ml")
-  hostname: "my_domain"
+  hostname: null
   # address where lemmy should listen for incoming requests
   bind: "0.0.0.0"
   # port where lemmy should listen for incoming requests
   port: 8536
   # json web token for authorization between server and client
   jwt_secret: "changeme"
-  # The dir for the front end
+  # The location of the frontend
   front_end_dir: "../ui/dist"
-  # whether to enable activitypub federation. this feature is in alpha, do not enable in production, as might
-  # cause problems like remote instances fetching and permanently storing bad data.
-  federation_enabled: false
   # rate limits for various user actions, by user ip
   rate_limit: {
     # maximum number of messages created in interval
@@ -53,15 +50,26 @@
     # interval length for registration limit
     register_per_second: 3600
   }
+  # settings related to activitypub federation
+  federation: {
+    # whether to enable activitypub federation. this feature is in alpha, do not enable in production.
+    enabled: false
+    # whether tls is required for activitypub. only disable this for debugging, never for producion.
+    tls_enabled: true
+    # comma seperated list of instances with which federation is allowed
+    allowed_instances: ""
+  }
 #  # email sending configuration
 #  email: {
-#    # hostname of the smtp server
+#    # hostname and port of the smtp server
 #    smtp_server: ""
 #    # login name for smtp server
 #    smtp_login: ""
 #    # password to login to the smtp server
 #    smtp_password: ""
-#    # address to send emails from, eg "info@your-instance.com"
+#    # address to send emails from, eg "noreply@your-instance.com"
 #    smtp_from_address: ""
+#    # whether or not smtp connections should use tls
+#    use_tls: true
 #  }
 }

@@ -1,6 +1,7 @@
 use super::comment::Comment;
-use super::*;
-use crate::schema::user_mention;
+use crate::{db::Crud, schema::user_mention};
+use diesel::{dsl::*, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Associations, Identifiable, PartialEq, Debug, Serialize, Deserialize)]
 #[belongs_to(Comment)]
@@ -53,18 +54,18 @@ impl Crud<UserMentionForm> for UserMention {
 
 #[cfg(test)]
 mod tests {
-  use super::super::comment::*;
-  use super::super::community::*;
-  use super::super::post::*;
-  use super::super::user::*;
-  use super::*;
+  use super::{
+    super::{comment::*, community::*, post::*, user::*},
+    *,
+  };
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let new_user = UserForm {
       name: "terrylake".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -80,13 +81,18 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
 
     let recipient_form = UserForm {
       name: "terrylakes recipient".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -102,6 +108,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_recipient = User_::create(&conn, &recipient_form).unwrap();
@@ -116,6 +128,12 @@ mod tests {
       deleted: None,
       updated: None,
       nsfw: false,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -136,6 +154,9 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = Post::create(&conn, &new_post).unwrap();
@@ -148,7 +169,10 @@ mod tests {
       deleted: None,
       read: None,
       parent_id: None,
+      published: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let inserted_comment = Comment::create(&conn, &comment_form).unwrap();

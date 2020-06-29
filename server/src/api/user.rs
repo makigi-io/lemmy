@@ -1,6 +1,58 @@
-use super::*;
-use crate::is_valid_username;
+use crate::{
+  api::{APIError, Oper, Perform},
+  apub::{
+    extensions::signatures::generate_actor_keypair,
+    make_apub_endpoint,
+    ApubObjectType,
+    EndpointType,
+  },
+  db::{
+    comment::*,
+    comment_view::*,
+    community::*,
+    community_view::*,
+    moderator::*,
+    password_reset_request::*,
+    post::*,
+    post_view::*,
+    private_message::*,
+    private_message_view::*,
+    site::*,
+    site_view::*,
+    user::*,
+    user_mention::*,
+    user_mention_view::*,
+    user_view::*,
+    Crud,
+    Followable,
+    Joinable,
+    ListingType,
+    SortType,
+  },
+  generate_random_string,
+  is_valid_username,
+  naive_from_unix,
+  naive_now,
+  remove_slurs,
+  send_email,
+  settings::Settings,
+  slur_check,
+  slurs_vec_to_str,
+  websocket::{
+    server::{JoinUserRoom, SendAllMessage, SendUserRoomMessage},
+    UserOperation,
+    WebsocketInfo,
+  },
+};
 use bcrypt::verify;
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
+use failure::Error;
+use log::error;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Login {
@@ -187,7 +239,7 @@ pub struct PrivateMessagesResponse {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PrivateMessageResponse {
-  message: PrivateMessageView,
+  pub message: PrivateMessageView,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -262,6 +314,7 @@ impl Perform for Oper<Register> {
       return Err(APIError::err("admin_already_created").into());
     }
 
+    let user_keypair = generate_actor_keypair()?;
     if !is_valid_username(&data.username) {
       return Err(APIError::err("invalid_username").into());
     }
@@ -269,7 +322,6 @@ impl Perform for Oper<Register> {
     // Register the new user
     let user_form = UserForm {
       name: data.username.to_owned(),
-      fedi_name: Settings::get().hostname,
       email: data.email.to_owned(),
       matrix_user_id: None,
       avatar: None,
@@ -285,6 +337,12 @@ impl Perform for Oper<Register> {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: make_apub_endpoint(EndpointType::User, &data.username).to_string(),
+      bio: None,
+      local: true,
+      private_key: Some(user_keypair.private_key),
+      public_key: Some(user_keypair.public_key),
+      last_refreshed_at: None,
     };
 
     // Create the user
@@ -303,12 +361,15 @@ impl Perform for Oper<Register> {
       }
     };
 
+    let main_community_keypair = generate_actor_keypair()?;
+
     // Create the main community if it doesn't exist
     let main_community: Community = match Community::read(&conn, 2) {
       Ok(c) => c,
       Err(_e) => {
+        let default_community_name = "main";
         let community_form = CommunityForm {
-          name: "main".to_string(),
+          name: default_community_name.to_string(),
           title: "The Default Community".to_string(),
           description: Some("The Default Community".to_string()),
           category_id: 1,
@@ -317,6 +378,12 @@ impl Perform for Oper<Register> {
           removed: None,
           deleted: None,
           updated: None,
+          actor_id: make_apub_endpoint(EndpointType::Community, default_community_name).to_string(),
+          local: true,
+          private_key: Some(main_community_keypair.private_key),
+          public_key: Some(main_community_keypair.public_key),
+          last_refreshed_at: None,
+          published: None,
         };
         Community::create(&conn, &community_form).unwrap()
       }
@@ -411,7 +478,6 @@ impl Perform for Oper<SaveUserSettings> {
 
     let user_form = UserForm {
       name: read_user.name,
-      fedi_name: read_user.fedi_name,
       email,
       matrix_user_id: data.matrix_user_id.to_owned(),
       avatar: data.avatar.to_owned(),
@@ -427,6 +493,12 @@ impl Perform for Oper<SaveUserSettings> {
       lang: data.lang.to_owned(),
       show_avatars: data.show_avatars,
       send_notifications_to_email: data.send_notifications_to_email,
+      actor_id: read_user.actor_id,
+      bio: read_user.bio,
+      local: read_user.local,
+      private_key: read_user.private_key,
+      public_key: read_user.public_key,
+      last_refreshed_at: None,
     };
 
     let updated_user = match User_::update(&conn, user_id, &user_form) {
@@ -488,7 +560,7 @@ impl Perform for Oper<GetUserDetails> {
       None => {
         match User_::read_from_name(
           &conn,
-          data
+          &data
             .username
             .to_owned()
             .unwrap_or_else(|| "admin".to_string()),
@@ -580,30 +652,7 @@ impl Perform for Oper<AddAdmin> {
       return Err(APIError::err("not_an_admin").into());
     }
 
-    let read_user = User_::read(&conn, data.user_id)?;
-
-    // TODO make addadmin easier
-    let user_form = UserForm {
-      name: read_user.name,
-      fedi_name: read_user.fedi_name,
-      email: read_user.email,
-      matrix_user_id: read_user.matrix_user_id,
-      avatar: read_user.avatar,
-      password_encrypted: read_user.password_encrypted,
-      preferred_username: read_user.preferred_username,
-      updated: Some(naive_now()),
-      admin: data.added,
-      banned: read_user.banned,
-      show_nsfw: read_user.show_nsfw,
-      theme: read_user.theme,
-      default_sort_type: read_user.default_sort_type,
-      default_listing_type: read_user.default_listing_type,
-      lang: read_user.lang,
-      show_avatars: read_user.show_avatars,
-      send_notifications_to_email: read_user.send_notifications_to_email,
-    };
-
-    match User_::update(&conn, data.user_id, &user_form) {
+    match User_::add_admin(&conn, user_id, data.added) {
       Ok(user) => user,
       Err(_e) => return Err(APIError::err("couldnt_update_user").into()),
     };
@@ -661,30 +710,7 @@ impl Perform for Oper<BanUser> {
       return Err(APIError::err("not_an_admin").into());
     }
 
-    let read_user = User_::read(&conn, data.user_id)?;
-
-    // TODO make bans and addadmins easier
-    let user_form = UserForm {
-      name: read_user.name,
-      fedi_name: read_user.fedi_name,
-      email: read_user.email,
-      matrix_user_id: read_user.matrix_user_id,
-      avatar: read_user.avatar,
-      password_encrypted: read_user.password_encrypted,
-      preferred_username: read_user.preferred_username,
-      updated: Some(naive_now()),
-      admin: read_user.admin,
-      banned: data.ban,
-      show_nsfw: read_user.show_nsfw,
-      theme: read_user.theme,
-      default_sort_type: read_user.default_sort_type,
-      default_listing_type: read_user.default_listing_type,
-      lang: read_user.lang,
-      show_avatars: read_user.show_avatars,
-      send_notifications_to_email: read_user.send_notifications_to_email,
-    };
-
-    match User_::update(&conn, data.user_id, &user_form) {
+    match User_::ban_user(&conn, user_id, data.ban) {
       Ok(user) => user,
       Err(_e) => return Err(APIError::err("couldnt_update_user").into()),
     };
@@ -855,18 +881,7 @@ impl Perform for Oper<MarkAllAsRead> {
       .list()?;
 
     for reply in &replies {
-      let comment_form = CommentForm {
-        content: reply.to_owned().content,
-        parent_id: reply.to_owned().parent_id,
-        post_id: reply.to_owned().post_id,
-        creator_id: reply.to_owned().creator_id,
-        removed: None,
-        deleted: None,
-        read: Some(true),
-        updated: reply.to_owned().updated,
-      };
-
-      let _updated_comment = match Comment::update(&conn, reply.id, &comment_form) {
+      match Comment::mark_as_read(&conn, reply.id) {
         Ok(comment) => comment,
         Err(_e) => return Err(APIError::err("couldnt_update_comment").into()),
       };
@@ -902,12 +917,15 @@ impl Perform for Oper<MarkAllAsRead> {
 
     for message in &messages {
       let private_message_form = PrivateMessageForm {
-        content: None,
+        content: message.to_owned().content,
         creator_id: message.to_owned().creator_id,
         recipient_id: message.to_owned().recipient_id,
         deleted: None,
         read: Some(true),
         updated: None,
+        ap_id: message.to_owned().ap_id,
+        local: message.local,
+        published: None,
       };
 
       let _updated_message = match PrivateMessage::update(&conn, message.id, &private_message_form)
@@ -955,18 +973,7 @@ impl Perform for Oper<DeleteAccount> {
       .list()?;
 
     for comment in &comments {
-      let comment_form = CommentForm {
-        content: "*Permananently Deleted*".to_string(),
-        parent_id: comment.to_owned().parent_id,
-        post_id: comment.to_owned().post_id,
-        creator_id: comment.to_owned().creator_id,
-        removed: None,
-        deleted: Some(true),
-        read: None,
-        updated: Some(naive_now()),
-      };
-
-      let _updated_comment = match Comment::update(&conn, comment.id, &comment_form) {
+      let _updated_comment = match Comment::permadelete(&conn, comment.id) {
         Ok(comment) => comment,
         Err(_e) => return Err(APIError::err("couldnt_update_comment").into()),
       };
@@ -980,25 +987,7 @@ impl Perform for Oper<DeleteAccount> {
       .list()?;
 
     for post in &posts {
-      let post_form = PostForm {
-        name: "*Permananently Deleted*".to_string(),
-        url: Some("https://deleted.com".to_string()),
-        body: Some("*Permananently Deleted*".to_string()),
-        creator_id: post.to_owned().creator_id,
-        community_id: post.to_owned().community_id,
-        removed: None,
-        deleted: Some(true),
-        nsfw: post.to_owned().nsfw,
-        locked: None,
-        stickied: None,
-        updated: Some(naive_now()),
-        embed_title: None,
-        embed_description: None,
-        embed_html: None,
-        thumbnail_url: None,
-      };
-
-      let _updated_post = match Post::update(&conn, post.id, &post_form) {
+      let _updated_post = match Post::permadelete(&conn, post.id) {
         Ok(post) => post,
         Err(_e) => return Err(APIError::err("couldnt_update_post").into()),
       };
@@ -1104,19 +1093,23 @@ impl Perform for Oper<CreatePrivateMessage> {
     let conn = pool.get()?;
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
     let content_slurs_removed = remove_slurs(&data.content.to_owned());
 
     let private_message_form = PrivateMessageForm {
-      content: Some(content_slurs_removed.to_owned()),
+      content: content_slurs_removed.to_owned(),
       creator_id: user_id,
       recipient_id: data.recipient_id,
       deleted: None,
       read: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_private_message = match PrivateMessage::create(&conn, &private_message_form) {
@@ -1125,6 +1118,14 @@ impl Perform for Oper<CreatePrivateMessage> {
         return Err(APIError::err("couldnt_create_private_message").into());
       }
     };
+
+    let updated_private_message =
+      match PrivateMessage::update_ap_id(&conn, inserted_private_message.id) {
+        Ok(private_message) => private_message,
+        Err(_e) => return Err(APIError::err("couldnt_create_private_message").into()),
+      };
+
+    updated_private_message.send_create(&user, &conn)?;
 
     // Send notifications to the recipient
     let recipient_user = User_::read(&conn, data.recipient_id)?;
@@ -1169,7 +1170,7 @@ impl Perform for Oper<EditPrivateMessage> {
   fn perform(
     &self,
     pool: Pool<ConnectionManager<PgConnection>>,
-    _websocket_info: Option<WebsocketInfo>,
+    websocket_info: Option<WebsocketInfo>,
   ) -> Result<PrivateMessageResponse, Error> {
     let data: &EditPrivateMessage = &self.data;
 
@@ -1185,7 +1186,8 @@ impl Perform for Oper<EditPrivateMessage> {
     let orig_private_message = PrivateMessage::read(&conn, data.edit_id)?;
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
@@ -1197,8 +1199,8 @@ impl Perform for Oper<EditPrivateMessage> {
     }
 
     let content_slurs_removed = match &data.content {
-      Some(content) => Some(remove_slurs(content)),
-      None => None,
+      Some(content) => remove_slurs(content),
+      None => orig_private_message.content,
     };
 
     let private_message_form = PrivateMessageForm {
@@ -1212,17 +1214,41 @@ impl Perform for Oper<EditPrivateMessage> {
       } else {
         Some(naive_now())
       },
+      ap_id: orig_private_message.ap_id,
+      local: orig_private_message.local,
+      published: None,
     };
 
-    let _updated_private_message =
+    let updated_private_message =
       match PrivateMessage::update(&conn, data.edit_id, &private_message_form) {
         Ok(private_message) => private_message,
         Err(_e) => return Err(APIError::err("couldnt_update_private_message").into()),
       };
 
+    if let Some(deleted) = data.deleted.to_owned() {
+      if deleted {
+        updated_private_message.send_delete(&user, &conn)?;
+      } else {
+        updated_private_message.send_undo_delete(&user, &conn)?;
+      }
+    } else {
+      updated_private_message.send_update(&user, &conn)?;
+    }
+
     let message = PrivateMessageView::read(&conn, data.edit_id)?;
 
-    Ok(PrivateMessageResponse { message })
+    let res = PrivateMessageResponse { message };
+
+    if let Some(ws) = websocket_info {
+      ws.chatserver.do_send(SendUserRoomMessage {
+        op: UserOperation::EditPrivateMessage,
+        response: res.clone(),
+        recipient_id: orig_private_message.recipient_id,
+        my_id: ws.id,
+      });
+    }
+
+    Ok(res)
   }
 }
 

@@ -35,6 +35,7 @@ import {
   setupTribute,
   setupTippy,
   emojiPicker,
+  hostname,
   pictrsDeleteToast,
 } from '../utils';
 import autosize from 'autosize';
@@ -333,7 +334,11 @@ export class PostForm extends Component<PostFormProps, PostFormState> {
                 >
                   <option>{i18n.t('select_a_community')}</option>
                   {this.state.communities.map(community => (
-                    <option value={community.id}>{community.name}</option>
+                    <option value={community.id}>
+                      {community.local
+                        ? community.name
+                        : `${hostname(community.actor_id)}/${community.name}`}
+                    </option>
                   ))}
                 </select>
               </div>

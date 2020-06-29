@@ -1,15 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+
+BRANCH=$1
+
+git checkout $BRANCH
 
 export COMPOSE_DOCKER_CLI_BUILD=1
 export DOCKER_BUILDKIT=1
 
 # Rebuilding dev docker
-docker-compose build
-docker tag dev_lemmy:latest dessalines/lemmy:test
-docker push dessalines/lemmy:test
+sudo docker build ../../ -f . -t "dessalines/lemmy:$BRANCH"
+sudo docker push "dessalines/lemmy:$BRANCH"
 
 # Run the playbook
 pushd ../../../lemmy-ansible
-ansible-playbook -i test playbooks/site.yml --vault-password-file vault_pass
+ansible-playbook -i test playbooks/site.yml
 popd

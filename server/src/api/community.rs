@@ -1,18 +1,44 @@
 use super::*;
-use crate::is_valid_community_name;
+use crate::{
+  api::{APIError, Oper, Perform},
+  apub::{
+    extensions::signatures::generate_actor_keypair,
+    make_apub_endpoint,
+    ActorType,
+    EndpointType,
+  },
+  db::{Bannable, Crud, Followable, Joinable, SortType},
+  is_valid_community_name,
+  naive_from_unix,
+  naive_now,
+  slur_check,
+  slurs_vec_to_str,
+  websocket::{
+    server::{JoinCommunityRoom, SendCommunityRoomMessage},
+    UserOperation,
+    WebsocketInfo,
+  },
+};
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
+use failure::Error;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
 pub struct GetCommunity {
   id: Option<i32>,
-  name: Option<String>,
+  pub name: Option<String>,
   auth: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct GetCommunityResponse {
   pub community: CommunityView,
-  moderators: Vec<CommunityModeratorView>,
-  admins: Vec<UserView>,
+  pub moderators: Vec<CommunityModeratorView>,
+  pub admins: Vec<UserView>,
   pub online: usize,
 }
 
@@ -31,17 +57,17 @@ pub struct CommunityResponse {
   pub community: CommunityView,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ListCommunities {
-  sort: String,
-  page: Option<i64>,
-  limit: Option<i64>,
-  auth: Option<String>,
+  pub sort: String,
+  pub page: Option<i64>,
+  pub limit: Option<i64>,
+  pub auth: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ListCommunitiesResponse {
-  communities: Vec<CommunityView>,
+  pub communities: Vec<CommunityView>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -135,25 +161,25 @@ impl Perform for Oper<GetCommunity> {
 
     let conn = pool.get()?;
 
-    let community_id = match data.id {
-      Some(id) => id,
+    let community = match data.id {
+      Some(id) => Community::read(&conn, id)?,
       None => {
         match Community::read_from_name(
           &conn,
-          data.name.to_owned().unwrap_or_else(|| "main".to_string()),
+          &data.name.to_owned().unwrap_or_else(|| "main".to_string()),
         ) {
-          Ok(community) => community.id,
+          Ok(community) => community,
           Err(_e) => return Err(APIError::err("couldnt_find_community").into()),
         }
       }
     };
 
-    let community_view = match CommunityView::read(&conn, community_id, user_id) {
+    let community_view = match CommunityView::read(&conn, community.id, user_id) {
       Ok(community) => community,
       Err(_e) => return Err(APIError::err("couldnt_find_community").into()),
     };
 
-    let moderators = match CommunityModeratorView::for_community(&conn, community_id) {
+    let moderators = match CommunityModeratorView::for_community(&conn, community.id) {
       Ok(moderators) => moderators,
       Err(_e) => return Err(APIError::err("couldnt_find_community").into()),
     };
@@ -166,8 +192,10 @@ impl Perform for Oper<GetCommunity> {
 
     let online = if let Some(ws) = websocket_info {
       if let Some(id) = ws.id {
-        ws.chatserver
-          .do_send(JoinCommunityRoom { community_id, id });
+        ws.chatserver.do_send(JoinCommunityRoom {
+          community_id: community.id,
+          id,
+        });
       }
 
       // TODO
@@ -235,6 +263,8 @@ impl Perform for Oper<CreateCommunity> {
     }
 
     // When you create a community, make sure the user becomes a moderator and a follower
+    let keypair = generate_actor_keypair()?;
+
     let community_form = CommunityForm {
       name: data.name.to_owned(),
       title: data.title.to_owned(),
@@ -245,6 +275,12 @@ impl Perform for Oper<CreateCommunity> {
       deleted: None,
       nsfw: data.nsfw,
       updated: None,
+      actor_id: make_apub_endpoint(EndpointType::Community, &data.name).to_string(),
+      local: true,
+      private_key: Some(keypair.private_key),
+      public_key: Some(keypair.public_key),
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = match Community::create(&conn, &community_form) {
@@ -320,7 +356,8 @@ impl Perform for Oper<EditCommunity> {
     let conn = pool.get()?;
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
@@ -337,6 +374,8 @@ impl Perform for Oper<EditCommunity> {
       return Err(APIError::err("no_community_edit_allowed").into());
     }
 
+    let read_community = Community::read(&conn, data.edit_id)?;
+
     let community_form = CommunityForm {
       name: data.name.to_owned(),
       title: data.title.to_owned(),
@@ -347,9 +386,15 @@ impl Perform for Oper<EditCommunity> {
       deleted: data.deleted.to_owned(),
       nsfw: data.nsfw,
       updated: Some(naive_now()),
+      actor_id: read_community.actor_id,
+      local: read_community.local,
+      private_key: read_community.private_key,
+      public_key: read_community.public_key,
+      last_refreshed_at: None,
+      published: None,
     };
 
-    let _updated_community = match Community::update(&conn, data.edit_id, &community_form) {
+    let updated_community = match Community::update(&conn, data.edit_id, &community_form) {
       Ok(community) => community,
       Err(_e) => return Err(APIError::err("couldnt_update_community").into()),
     };
@@ -368,6 +413,20 @@ impl Perform for Oper<EditCommunity> {
         expires,
       };
       ModRemoveCommunity::create(&conn, &form)?;
+    }
+
+    if let Some(deleted) = data.deleted.to_owned() {
+      if deleted {
+        updated_community.send_delete(&user, &conn)?;
+      } else {
+        updated_community.send_undo_delete(&user, &conn)?;
+      }
+    } else if let Some(removed) = data.removed.to_owned() {
+      if removed {
+        updated_community.send_remove(&user, &conn)?;
+      } else {
+        updated_community.send_undo_remove(&user, &conn)?;
+      }
     }
 
     let community_view = CommunityView::read(&conn, data.edit_id, Some(user_id))?;
@@ -456,23 +515,41 @@ impl Perform for Oper<FollowCommunity> {
 
     let user_id = claims.id;
 
+    let conn = pool.get()?;
+
+    let community = Community::read(&conn, data.community_id)?;
     let community_follower_form = CommunityFollowerForm {
       community_id: data.community_id,
       user_id,
     };
 
-    let conn = pool.get()?;
-
-    if data.follow {
-      match CommunityFollower::follow(&conn, &community_follower_form) {
-        Ok(user) => user,
-        Err(_e) => return Err(APIError::err("community_follower_already_exists").into()),
-      };
+    if community.local {
+      if data.follow {
+        match CommunityFollower::follow(&conn, &community_follower_form) {
+          Ok(user) => user,
+          Err(_e) => return Err(APIError::err("community_follower_already_exists").into()),
+        };
+      } else {
+        match CommunityFollower::unfollow(&conn, &community_follower_form) {
+          Ok(user) => user,
+          Err(_e) => return Err(APIError::err("community_follower_already_exists").into()),
+        };
+      }
     } else {
-      match CommunityFollower::ignore(&conn, &community_follower_form) {
-        Ok(user) => user,
-        Err(_e) => return Err(APIError::err("community_follower_already_exists").into()),
-      };
+      let user = User_::read(&conn, user_id)?;
+
+      if data.follow {
+        // Dont actually add to the community followers here, because you need
+        // to wait for the accept
+        user.send_follow(&community.actor_id, &conn)?;
+      } else {
+        user.send_unfollow(&community.actor_id, &conn)?;
+        match CommunityFollower::unfollow(&conn, &community_follower_form) {
+          Ok(user) => user,
+          Err(_e) => return Err(APIError::err("community_follower_already_exists").into()),
+        };
+      }
+      // TODO: this needs to return a "pending" state, until Accept is received from the remote server
     }
 
     let community_view = CommunityView::read(&conn, data.community_id, Some(user_id))?;
@@ -684,11 +761,17 @@ impl Perform for Oper<TransferCommunity> {
       title: read_community.title,
       description: read_community.description,
       category_id: read_community.category_id,
-      creator_id: data.user_id,
+      creator_id: data.user_id, // This makes the new user the community creator
       removed: None,
       deleted: None,
       nsfw: read_community.nsfw,
       updated: Some(naive_now()),
+      actor_id: read_community.actor_id,
+      local: read_community.local,
+      private_key: read_community.private_key,
+      public_key: read_community.public_key,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let _updated_community = match Community::update(&conn, data.community_id, &community_form) {

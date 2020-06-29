@@ -100,10 +100,13 @@ export interface User {
 
 export interface UserView {
   id: number;
+  actor_id: string;
   name: string;
   avatar?: string;
   email?: string;
   matrix_user_id?: string;
+  bio?: string;
+  local: boolean;
   published: string;
   number_of_posts: number;
   post_score: number;
@@ -117,15 +120,21 @@ export interface UserView {
 export interface CommunityUser {
   id: number;
   user_id: number;
+  user_actor_id: string;
+  user_local: boolean;
   user_name: string;
   avatar?: string;
   community_id: number;
+  community_actor_id: string;
+  community_local: boolean;
   community_name: string;
   published: string;
 }
 
 export interface Community {
   id: number;
+  actor_id: string;
+  local: boolean;
   name: string;
   title: string;
   description?: string;
@@ -136,6 +145,9 @@ export interface Community {
   nsfw: boolean;
   published: string;
   updated?: string;
+  creator_actor_id: string;
+  creator_local: boolean;
+  last_refreshed_at: string;
   creator_name: string;
   creator_avatar?: string;
   category_name: string;
@@ -161,13 +173,19 @@ export interface Post {
   embed_description?: string;
   embed_html?: string;
   thumbnail_url?: string;
+  ap_id: string;
+  local: boolean;
   nsfw: boolean;
   banned: boolean;
   banned_from_community: boolean;
   published: string;
   updated?: string;
+  creator_actor_id: string;
+  creator_local: boolean;
   creator_name: string;
   creator_avatar?: string;
+  community_actor_id: string;
+  community_local: boolean;
   community_name: string;
   community_removed: boolean;
   community_deleted: boolean;
@@ -188,6 +206,8 @@ export interface Post {
 
 export interface Comment {
   id: number;
+  ap_id: string;
+  local: boolean;
   creator_id: number;
   post_id: number;
   parent_id?: number;
@@ -198,9 +218,13 @@ export interface Comment {
   published: string;
   updated?: string;
   community_id: number;
+  community_actor_id: string;
+  community_local: boolean;
   community_name: string;
   banned: boolean;
   banned_from_community: boolean;
+  creator_actor_id: string;
+  creator_local: boolean;
   creator_name: string;
   creator_avatar?: string;
   score: number;
@@ -213,6 +237,8 @@ export interface Comment {
   saved?: boolean;
   user_mention_id?: number; // For mention type
   recipient_id?: number;
+  recipient_actor_id?: string;
+  recipient_local?: boolean;
   depth?: number;
 }
 
@@ -247,10 +273,16 @@ export interface PrivateMessage {
   read: boolean;
   published: string;
   updated?: string;
+  ap_id: string;
+  local: boolean;
   creator_name: string;
   creator_avatar?: string;
+  creator_actor_id: string;
+  creator_local: boolean;
   recipient_name: string;
   recipient_avatar?: string;
+  recipient_actor_id: string;
+  recipient_local: boolean;
 }
 
 export enum BanType {
@@ -628,7 +660,7 @@ export interface CommentForm {
   post_id: number;
   parent_id?: number;
   edit_id?: number;
-  creator_id: number;
+  creator_id?: number;
   removed?: boolean;
   deleted?: boolean;
   reason?: string;

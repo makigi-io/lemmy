@@ -1,5 +1,6 @@
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{limit_and_offset, MaybeOptional};
+use diesel::{pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 // The faked schema since diesel doesn't do views
 table! {
@@ -12,10 +13,16 @@ table! {
     read -> Bool,
     published -> Timestamp,
     updated -> Nullable<Timestamp>,
+    ap_id -> Text,
+    local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     recipient_name -> Varchar,
     recipient_avatar -> Nullable<Text>,
+    recipient_actor_id -> Text,
+    recipient_local -> Bool,
   }
 }
 
@@ -29,10 +36,16 @@ table! {
     read -> Bool,
     published -> Timestamp,
     updated -> Nullable<Timestamp>,
+    ap_id -> Text,
+    local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     recipient_name -> Varchar,
     recipient_avatar -> Nullable<Text>,
+    recipient_actor_id -> Text,
+    recipient_local -> Bool,
   }
 }
 
@@ -49,10 +62,16 @@ pub struct PrivateMessageView {
   pub read: bool,
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
+  pub ap_id: String,
+  pub local: bool,
   pub creator_name: String,
   pub creator_avatar: Option<String>,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub recipient_name: String,
   pub recipient_avatar: Option<String>,
+  pub recipient_actor_id: String,
+  pub recipient_local: bool,
 }
 
 pub struct PrivateMessageQueryBuilder<'a> {

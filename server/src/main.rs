@@ -6,14 +6,21 @@ pub extern crate lazy_static;
 
 use crate::lemmy_server::actix_web::dev::Service;
 use actix::prelude::*;
-use actix_web::body::Body;
-use actix_web::dev::{ServiceRequest, ServiceResponse};
-use actix_web::http::header::CONTENT_TYPE;
-use actix_web::http::{header::CACHE_CONTROL, HeaderValue};
-use actix_web::*;
-use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
+use actix_web::{
+  body::Body,
+  dev::{ServiceRequest, ServiceResponse},
+  http::{
+    header::{CACHE_CONTROL, CONTENT_TYPE},
+    HeaderValue,
+  },
+  *,
+};
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
 use lemmy_server::{
+  db::code_migrations::run_advanced_migrations,
   rate_limit::{rate_limiter::RateLimiter, RateLimit},
   routes::{api, federation, feeds, index, nodeinfo, webfinger},
   settings::Settings,
@@ -48,6 +55,7 @@ async fn main() -> io::Result<()> {
   // Run the migrations from code
   let conn = pool.get().unwrap();
   embedded_migrations::run(&conn).unwrap();
+  run_advanced_migrations(&conn).unwrap();
 
   // Set up the rate limiter
   let rate_limiter = RateLimit {

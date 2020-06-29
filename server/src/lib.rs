@@ -16,6 +16,8 @@ pub extern crate dotenv;
 pub extern crate jsonwebtoken;
 pub extern crate lettre;
 pub extern crate lettre_email;
+extern crate log;
+pub extern crate openssl;
 pub extern crate rand;
 pub extern crate regex;
 pub extern crate rss;
@@ -34,21 +36,27 @@ pub mod settings;
 pub mod version;
 pub mod websocket;
 
+use crate::settings::Settings;
 use actix_web::dev::ConnectionInfo;
-use chrono::{DateTime, NaiveDateTime, Utc};
-use lettre::smtp::authentication::{Credentials, Mechanism};
-use lettre::smtp::extension::ClientId;
-use lettre::smtp::ConnectionReuseParameters;
-use lettre::{ClientSecurity, SmtpClient, Transport};
+use chrono::{DateTime, FixedOffset, Local, NaiveDateTime, Utc};
+use isahc::prelude::*;
+use itertools::Itertools;
+use lettre::{
+  smtp::{
+    authentication::{Credentials, Mechanism},
+    extension::ClientId,
+    ConnectionReuseParameters,
+  },
+  ClientSecurity,
+  SmtpClient,
+  Transport,
+};
 use lettre_email::Email;
 use log::error;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use regex::{Regex, RegexBuilder};
 use serde::Deserialize;
-
-use crate::settings::Settings;
 
 pub type ConnectionId = usize;
 pub type PostId = i32;
@@ -68,13 +76,17 @@ pub fn naive_from_unix(time: i64) -> NaiveDateTime {
   NaiveDateTime::from_timestamp(time, 0)
 }
 
+pub fn convert_datetime(datetime: NaiveDateTime) -> DateTime<FixedOffset> {
+  let now = Local::now();
+  DateTime::<FixedOffset>::from_utc(datetime, *now.offset())
+}
+
 pub fn is_email_regex(test: &str) -> bool {
   EMAIL_REGEX.is_match(test)
 }
 
 pub fn is_image_content_type(test: &str) -> Result<(), failure::Error> {
-  if attohttpc::get(test)
-    .send()?
+  if isahc::get(test)?
     .headers()
     .get("Content-Type")
     .ok_or_else(|| format_err!("No Content-Type header"))?
@@ -109,20 +121,6 @@ pub fn slurs_vec_to_str(slurs: Vec<&str>) -> String {
   let start = "No slurs - ";
   let combined = &slurs.join(", ");
   [start, combined].concat()
-}
-
-pub fn extract_usernames(test: &str) -> Vec<&str> {
-  let mut matches: Vec<&str> = USERNAME_MATCHES_REGEX
-    .find_iter(test)
-    .map(|mat| mat.as_str())
-    .collect();
-
-  // Unique
-  matches.sort_unstable();
-  matches.dedup();
-
-  // Remove /u/
-  matches.iter().map(|t| &t[3..]).collect()
 }
 
 pub fn generate_random_string() -> String {
@@ -182,7 +180,7 @@ pub struct IframelyResponse {
 
 pub fn fetch_iframely(url: &str) -> Result<IframelyResponse, failure::Error> {
   let fetch_url = format!("http://iframely/oembed?url={}", url);
-  let text: String = attohttpc::get(&fetch_url).send()?.text()?;
+  let text = isahc::get(&fetch_url)?.text()?;
   let res: IframelyResponse = serde_json::from_str(&text)?;
   Ok(res)
 }
@@ -206,7 +204,7 @@ pub fn fetch_pictrs(image_url: &str) -> Result<PictrsResponse, failure::Error> {
     "http://pictrs:8080/image/download?url={}",
     utf8_percent_encode(image_url, NON_ALPHANUMERIC) // TODO this might not be needed
   );
-  let text = attohttpc::get(&fetch_url).send()?.text()?;
+  let text = isahc::get(&fetch_url)?.text()?;
   let res: PictrsResponse = serde_json::from_str(&text)?;
   if res.msg == "ok" {
     Ok(res)
@@ -279,6 +277,33 @@ pub fn get_ip(conn_info: &ConnectionInfo) -> String {
     .to_string()
 }
 
+// TODO nothing is done with community / group webfingers yet, so just ignore those for now
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct MentionData {
+  pub name: String,
+  pub domain: String,
+}
+
+impl MentionData {
+  pub fn is_local(&self) -> bool {
+    Settings::get().hostname.eq(&self.domain)
+  }
+  pub fn full_name(&self) -> String {
+    format!("@{}@{}", &self.name, &self.domain)
+  }
+}
+
+pub fn scrape_text_for_mentions(text: &str) -> Vec<MentionData> {
+  let mut out: Vec<MentionData> = Vec::new();
+  for caps in WEBFINGER_USER_REGEX.captures_iter(text) {
+    out.push(MentionData {
+      name: caps["name"].to_string(),
+      domain: caps["domain"].to_string(),
+    });
+  }
+  out.into_iter().unique().collect()
+}
+
 pub fn is_valid_username(name: &str) -> bool {
   VALID_USERNAME_REGEX.is_match(name)
 }
@@ -290,9 +315,25 @@ pub fn is_valid_community_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
   use crate::{
-    extract_usernames, is_email_regex, is_image_content_type, is_valid_community_name,
-    is_valid_username, remove_slurs, slur_check, slurs_vec_to_str,
+    is_email_regex,
+    is_image_content_type,
+    is_valid_community_name,
+    is_valid_username,
+    remove_slurs,
+    scrape_text_for_mentions,
+    slur_check,
+    slurs_vec_to_str,
   };
+
+  #[test]
+  fn test_mentions_regex() {
+    let text = "Just read a great blog post by [@tedu@honk.teduangst.com](/u/test). And another by !test_community@fish.teduangst.com . Another [@lemmy@lemmy_alpha:8540](/u/fish)";
+    let mentions = scrape_text_for_mentions(text);
+
+    assert_eq!(mentions[0].name, "tedu".to_string());
+    assert_eq!(mentions[0].domain, "honk.teduangst.com".to_string());
+    assert_eq!(mentions[1].domain, "lemmy_alpha:8540".to_string());
+  }
 
   #[test]
   fn test_image() {
@@ -357,13 +398,6 @@ mod tests {
     }
   }
 
-  #[test]
-  fn test_extract_usernames() {
-    let usernames = extract_usernames("this is a user mention for [/u/testme](/u/testme) and thats all. Oh [/u/another](/u/another) user. And the first again [/u/testme](/u/testme) okay");
-    let expected = vec!["another", "testme"];
-    assert_eq!(usernames, expected);
-  }
-
   // These helped with testing
   // #[test]
   // fn test_iframely() {
@@ -390,6 +424,9 @@ lazy_static! {
   static ref EMAIL_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$").unwrap();
   static ref SLUR_REGEX: Regex = RegexBuilder::new(r"(fag(g|got|tard)?|maricos?|cock\s?sucker(s|ing)?|nig(\b|g?(a|er)?(s|z)?)\b|dindu(s?)|mudslime?s?|kikes?|mongoloids?|towel\s*heads?|\bspi(c|k)s?\b|\bchinks?|niglets?|beaners?|\bnips?\b|\bcoons?\b|jungle\s*bunn(y|ies?)|jigg?aboo?s?|\bpakis?\b|rag\s*heads?|gooks?|cunts?|bitch(es|ing|y)?|puss(y|ies?)|twats?|feminazis?|whor(es?|ing)|\bslut(s|t?y)?|\btrann?(y|ies?)|ladyboy(s?)|\b(b|re|r)tard(ed)?s?)").case_insensitive(true).build().unwrap();
   static ref USERNAME_MATCHES_REGEX: Regex = Regex::new(r"/u/[a-zA-Z][0-9a-zA-Z_]*").unwrap();
+  // TODO keep this old one, it didn't work with port well tho
+  // static ref WEBFINGER_USER_REGEX: Regex = Regex::new(r"@(?P<name>[\w.]+)@(?P<domain>[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)").unwrap();
+  static ref WEBFINGER_USER_REGEX: Regex = Regex::new(r"@(?P<name>[\w.]+)@(?P<domain>[a-zA-Z0-9._:-]+)").unwrap();
   static ref VALID_USERNAME_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9_]{3,20}$").unwrap();
   static ref VALID_COMMUNITY_REGEX: Regex = Regex::new(r"^([a-z]+((\d)|([A-Z0-9][a-z0-9]+))*([A-Z])?){3,20}$").unwrap();
 }

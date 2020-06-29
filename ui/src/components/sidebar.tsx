@@ -8,14 +8,10 @@ import {
   UserView,
 } from '../interfaces';
 import { WebSocketService, UserService } from '../services';
-import {
-  mdToHtml,
-  getUnixTime,
-  pictrsAvatarThumbnail,
-  showAvatars,
-} from '../utils';
+import { mdToHtml, getUnixTime, hostname } from '../utils';
 import { CommunityForm } from './community-form';
 import { UserListing } from './user-listing';
+import { CommunityLink } from './community-link';
 import { i18n } from '../i18next';
 
 interface SidebarProps {
@@ -65,6 +61,15 @@ export class Sidebar extends Component<SidebarProps, SidebarState> {
 
   sidebar() {
     let community = this.props.community;
+    let name_: string, link: string;
+
+    if (community.local) {
+      name_ = community.name;
+      link = `/c/${community.name}`;
+    } else {
+      name_ = `${community.name}@${hostname(community.actor_id)}`;
+      link = community.actor_id;
+    }
     return (
       <div>
         <div class="card border-secondary mb-3">
@@ -82,9 +87,7 @@ export class Sidebar extends Component<SidebarProps, SidebarState> {
                 </small>
               )}
             </h5>
-            <Link className="text-muted" to={`/c/${community.name}`}>
-              /c/{community.name}
-            </Link>
+            <CommunityLink community={community} realLink />
             <ul class="list-inline mb-1 text-muted font-weight-bold">
               {this.canMod && (
                 <>
@@ -212,11 +215,15 @@ export class Sidebar extends Component<SidebarProps, SidebarState> {
                     user={{
                       name: mod.user_name,
                       avatar: mod.avatar,
+                      id: mod.user_id,
+                      local: mod.user_local,
+                      actor_id: mod.user_actor_id,
                     }}
                   />
                 </li>
               ))}
             </ul>
+            {/* TODO the to= needs to be able to handle community_ids as well, since they're federated */}
             <Link
               class={`btn btn-sm btn-secondary btn-block mb-3 ${
                 (community.deleted || community.removed) && 'no-click'

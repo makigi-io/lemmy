@@ -1,5 +1,10 @@
-use super::*;
-use crate::schema::private_message;
+use crate::{
+  apub::{make_apub_endpoint, EndpointType},
+  db::Crud,
+  schema::private_message,
+};
+use diesel::{dsl::*, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug, Serialize, Deserialize)]
 #[table_name = "private_message"]
@@ -12,6 +17,8 @@ pub struct PrivateMessage {
   pub read: bool,
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
+  pub ap_id: String,
+  pub local: bool,
 }
 
 #[derive(Insertable, AsChangeset, Clone)]
@@ -19,10 +26,13 @@ pub struct PrivateMessage {
 pub struct PrivateMessageForm {
   pub creator_id: i32,
   pub recipient_id: i32,
-  pub content: Option<String>,
+  pub content: String,
   pub deleted: Option<bool>,
   pub read: Option<bool>,
+  pub published: Option<chrono::NaiveDateTime>,
   pub updated: Option<chrono::NaiveDateTime>,
+  pub ap_id: String,
+  pub local: bool,
 }
 
 impl Crud<PrivateMessageForm> for PrivateMessage {
@@ -55,17 +65,39 @@ impl Crud<PrivateMessageForm> for PrivateMessage {
   }
 }
 
+impl PrivateMessage {
+  pub fn update_ap_id(conn: &PgConnection, private_message_id: i32) -> Result<Self, Error> {
+    use crate::schema::private_message::dsl::*;
+
+    let apid = make_apub_endpoint(
+      EndpointType::PrivateMessage,
+      &private_message_id.to_string(),
+    )
+    .to_string();
+    diesel::update(private_message.find(private_message_id))
+      .set(ap_id.eq(apid))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn read_from_apub_id(conn: &PgConnection, object_id: &str) -> Result<Self, Error> {
+    use crate::schema::private_message::dsl::*;
+    private_message
+      .filter(ap_id.eq(object_id))
+      .first::<Self>(conn)
+  }
+}
+
 #[cfg(test)]
 mod tests {
-  use super::super::user::*;
-  use super::*;
+  use super::{super::user::*, *};
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let creator_form = UserForm {
       name: "creator_pm".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -81,13 +113,18 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_creator = User_::create(&conn, &creator_form).unwrap();
 
     let recipient_form = UserForm {
       name: "recipient_pm".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -103,17 +140,26 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_recipient = User_::create(&conn, &recipient_form).unwrap();
 
     let private_message_form = PrivateMessageForm {
-      content: Some("A test private message".into()),
+      content: "A test private message".into(),
       creator_id: inserted_creator.id,
       recipient_id: inserted_recipient.id,
       deleted: None,
       read: None,
+      published: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let inserted_private_message = PrivateMessage::create(&conn, &private_message_form).unwrap();
@@ -127,6 +173,8 @@ mod tests {
       read: false,
       updated: None,
       published: inserted_private_message.published,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let read_private_message = PrivateMessage::read(&conn, inserted_private_message.id).unwrap();

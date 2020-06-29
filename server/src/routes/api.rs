@@ -1,10 +1,11 @@
-use super::*;
-use crate::api::comment::*;
-use crate::api::community::*;
-use crate::api::post::*;
-use crate::api::site::*;
-use crate::api::user::*;
-use crate::rate_limit::RateLimit;
+use crate::{
+  api::{comment::*, community::*, post::*, site::*, user::*, Oper, Perform},
+  rate_limit::RateLimit,
+  routes::{ChatServerParam, DbPoolParam},
+  websocket::WebsocketInfo,
+};
+use actix_web::{error::ErrorBadRequest, *};
+use serde::Serialize;
 
 pub fn config(cfg: &mut web::ServiceConfig, rate_limit: &RateLimit) {
   cfg.service(
@@ -82,6 +83,14 @@ pub fn config(cfg: &mut web::ServiceConfig, rate_limit: &RateLimit) {
           .route("", web::put().to(route_post::<EditComment>))
           .route("/like", web::post().to(route_post::<CreateCommentLike>))
           .route("/save", web::put().to(route_post::<SaveComment>)),
+      )
+      // Private Message
+      .service(
+        web::scope("/private_message")
+          .wrap(rate_limit.message())
+          .route("/list", web::get().to(route_get::<GetPrivateMessages>))
+          .route("", web::post().to(route_post::<CreatePrivateMessage>))
+          .route("", web::put().to(route_post::<EditPrivateMessage>)),
       )
       // User
       .service(

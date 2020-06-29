@@ -1,15 +1,18 @@
 use super::user_view::user_mview::BoxedQuery;
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{fuzzy_search, limit_and_offset, MaybeOptional, SortType};
+use diesel::{dsl::*, pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 table! {
   user_view (id) {
     id -> Int4,
+    actor_id -> Text,
     name -> Varchar,
     avatar -> Nullable<Text>,
     email -> Nullable<Text>,
     matrix_user_id -> Nullable<Text>,
-    fedi_name -> Varchar,
+    bio -> Nullable<Text>,
+    local -> Bool,
     admin -> Bool,
     banned -> Bool,
     show_avatars -> Bool,
@@ -25,11 +28,13 @@ table! {
 table! {
   user_mview (id) {
     id -> Int4,
+    actor_id -> Text,
     name -> Varchar,
     avatar -> Nullable<Text>,
     email -> Nullable<Text>,
     matrix_user_id -> Nullable<Text>,
-    fedi_name -> Varchar,
+    bio -> Nullable<Text>,
+    local -> Bool,
     admin -> Bool,
     banned -> Bool,
     show_avatars -> Bool,
@@ -48,11 +53,13 @@ table! {
 #[table_name = "user_view"]
 pub struct UserView {
   pub id: i32,
+  pub actor_id: String,
   pub name: String,
   pub avatar: Option<String>,
   pub email: Option<String>,
   pub matrix_user_id: Option<String>,
-  pub fedi_name: String,
+  pub bio: Option<String>,
+  pub local: bool,
   pub admin: bool,
   pub banned: bool,
   pub show_avatars: bool,

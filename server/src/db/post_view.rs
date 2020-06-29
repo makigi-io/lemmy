@@ -1,6 +1,7 @@
 use super::post_view::post_mview::BoxedQuery;
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{fuzzy_search, limit_and_offset, ListingType, MaybeOptional, SortType};
+use diesel::{dsl::*, pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 // The faked schema since diesel doesn't do views
 table! {
@@ -22,10 +23,16 @@ table! {
     embed_description -> Nullable<Text>,
     embed_html -> Nullable<Text>,
     thumbnail_url -> Nullable<Text>,
+    ap_id -> Text,
+    local -> Bool,
     banned -> Bool,
     banned_from_community -> Bool,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     community_removed -> Bool,
     community_deleted -> Bool,
@@ -63,10 +70,16 @@ table! {
     embed_description -> Nullable<Text>,
     embed_html -> Nullable<Text>,
     thumbnail_url -> Nullable<Text>,
+    ap_id -> Text,
+    local -> Bool,
     banned -> Bool,
     banned_from_community -> Bool,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     community_removed -> Bool,
     community_deleted -> Bool,
@@ -107,10 +120,16 @@ pub struct PostView {
   pub embed_description: Option<String>,
   pub embed_html: Option<String>,
   pub thumbnail_url: Option<String>,
+  pub ap_id: String,
+  pub local: bool,
   pub banned: bool,
   pub banned_from_community: bool,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub creator_name: String,
   pub creator_avatar: Option<String>,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
   pub community_removed: bool,
   pub community_deleted: bool,
@@ -345,10 +364,12 @@ impl PostView {
 
 #[cfg(test)]
 mod tests {
-  use super::super::community::*;
-  use super::super::post::*;
-  use super::super::user::*;
-  use super::*;
+  use super::{
+    super::{community::*, post::*, user::*},
+    *,
+  };
+  use crate::db::{establish_unpooled_connection, Crud, Likeable};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
@@ -359,7 +380,6 @@ mod tests {
 
     let new_user = UserForm {
       name: user_name.to_owned(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -375,6 +395,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -389,6 +415,12 @@ mod tests {
       deleted: None,
       updated: None,
       nsfw: false,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -409,6 +441,9 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = Post::create(&conn, &new_post).unwrap();
@@ -473,6 +508,12 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".to_string(),
+      local: true,
+      creator_actor_id: inserted_user.actor_id.to_owned(),
+      creator_local: true,
+      community_actor_id: inserted_community.actor_id.to_owned(),
+      community_local: true,
     };
 
     let expected_post_listing_with_user = PostView {
@@ -512,6 +553,12 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".to_string(),
+      local: true,
+      creator_actor_id: inserted_user.actor_id.to_owned(),
+      creator_local: true,
+      community_actor_id: inserted_community.actor_id.to_owned(),
+      community_local: true,
     };
 
     let read_post_listings_with_user = PostQueryBuilder::create(&conn)

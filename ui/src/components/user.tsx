@@ -40,6 +40,7 @@ import {
   setupTippy,
 } from '../utils';
 import { PostListing } from './post-listing';
+import { UserListing } from './user-listing';
 import { SortSelect } from './sort-select';
 import { ListingTypeSelect } from './listing-type-select';
 import { CommentNodes } from './comment-nodes';
@@ -90,6 +91,8 @@ export class User extends Component<any, UserState> {
       avatar: null,
       show_avatars: null,
       send_notifications_to_email: null,
+      actor_id: null,
+      local: null,
     },
     user_id: null,
     username: null,
@@ -398,7 +401,9 @@ export class User extends Component<any, UserState> {
           <div class="card-body">
             <h5>
               <ul class="list-inline mb-0">
-                <li className="list-inline-item">{user.name}</li>
+                <li className="list-inline-item">
+                  <UserListing user={user} realLink />
+                </li>
                 {user.banned && (
                   <li className="list-inline-item badge badge-danger">
                     {i18n.t('banned')}

@@ -1,6 +1,8 @@
-use super::*;
-use crate::schema::password_reset_request;
-use crate::schema::password_reset_request::dsl::*;
+use crate::{
+  db::Crud,
+  schema::{password_reset_request, password_reset_request::dsl::*},
+};
+use diesel::{dsl::*, result::Error, *};
 use sha2::{Digest, Sha256};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug)]
@@ -79,8 +81,8 @@ impl PasswordResetRequest {
 
 #[cfg(test)]
 mod tests {
-  use super::super::user::*;
-  use super::*;
+  use super::{super::user::*, *};
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
 
   #[test]
   fn test_crud() {
@@ -88,7 +90,6 @@ mod tests {
 
     let new_user = UserForm {
       name: "thommy prw".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -104,6 +105,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();

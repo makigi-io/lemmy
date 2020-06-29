@@ -1,5 +1,11 @@
-use super::*;
-use crate::schema::{post, post_like, post_read, post_saved};
+use crate::{
+  apub::{make_apub_endpoint, EndpointType},
+  db::{Crud, Likeable, Readable, Saveable},
+  naive_now,
+  schema::{post, post_like, post_read, post_saved},
+};
+use diesel::{dsl::*, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug, Serialize, Deserialize)]
 #[table_name = "post"]
@@ -21,9 +27,11 @@ pub struct Post {
   pub embed_description: Option<String>,
   pub embed_html: Option<String>,
   pub thumbnail_url: Option<String>,
+  pub ap_id: String,
+  pub local: bool,
 }
 
-#[derive(Insertable, AsChangeset, Clone)]
+#[derive(Insertable, AsChangeset, Clone, Debug)]
 #[table_name = "post"]
 pub struct PostForm {
   pub name: String,
@@ -33,6 +41,7 @@ pub struct PostForm {
   pub community_id: i32,
   pub removed: Option<bool>,
   pub locked: Option<bool>,
+  pub published: Option<chrono::NaiveDateTime>,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: Option<bool>,
   pub nsfw: bool,
@@ -41,6 +50,56 @@ pub struct PostForm {
   pub embed_description: Option<String>,
   pub embed_html: Option<String>,
   pub thumbnail_url: Option<String>,
+  pub ap_id: String,
+  pub local: bool,
+}
+
+impl Post {
+  pub fn read(conn: &PgConnection, post_id: i32) -> Result<Self, Error> {
+    use crate::schema::post::dsl::*;
+    post.filter(id.eq(post_id)).first::<Self>(conn)
+  }
+
+  pub fn list_for_community(
+    conn: &PgConnection,
+    the_community_id: i32,
+  ) -> Result<Vec<Self>, Error> {
+    use crate::schema::post::dsl::*;
+    post
+      .filter(community_id.eq(the_community_id))
+      .load::<Self>(conn)
+  }
+
+  pub fn read_from_apub_id(conn: &PgConnection, object_id: &str) -> Result<Self, Error> {
+    use crate::schema::post::dsl::*;
+    post.filter(ap_id.eq(object_id)).first::<Self>(conn)
+  }
+
+  pub fn update_ap_id(conn: &PgConnection, post_id: i32) -> Result<Self, Error> {
+    use crate::schema::post::dsl::*;
+
+    let apid = make_apub_endpoint(EndpointType::Post, &post_id.to_string()).to_string();
+    diesel::update(post.find(post_id))
+      .set(ap_id.eq(apid))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn permadelete(conn: &PgConnection, post_id: i32) -> Result<Self, Error> {
+    use crate::schema::post::dsl::*;
+
+    let perma_deleted = "*Permananently Deleted*";
+    let perma_deleted_url = "https://deleted.com";
+
+    diesel::update(post.find(post_id))
+      .set((
+        name.eq(perma_deleted),
+        url.eq(perma_deleted_url),
+        body.eq(perma_deleted),
+        deleted.eq(true),
+        updated.eq(naive_now()),
+      ))
+      .get_result::<Self>(conn)
+  }
 }
 
 impl Crud<PostForm> for Post {
@@ -182,16 +241,18 @@ impl Readable<PostReadForm> for PostRead {
 
 #[cfg(test)]
 mod tests {
-  use super::super::community::*;
-  use super::super::user::*;
-  use super::*;
+  use super::{
+    super::{community::*, user::*},
+    *,
+  };
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let new_user = UserForm {
       name: "jim".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -207,6 +268,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -221,6 +288,12 @@ mod tests {
       deleted: None,
       updated: None,
       nsfw: false,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -241,6 +314,9 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = Post::create(&conn, &new_post).unwrap();
@@ -263,6 +339,8 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     // Post Like

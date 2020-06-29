@@ -1,5 +1,9 @@
-use super::*;
-use crate::schema::{community, community_follower, community_moderator, community_user_ban};
+use crate::{
+  db::{Bannable, Crud, Followable, Joinable},
+  schema::{community, community_follower, community_moderator, community_user_ban},
+};
+use diesel::{dsl::*, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug, Serialize, Deserialize)]
 #[table_name = "community"]
@@ -15,9 +19,15 @@ pub struct Community {
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
   pub nsfw: bool,
+  pub actor_id: String,
+  pub local: bool,
+  pub private_key: Option<String>,
+  pub public_key: Option<String>,
+  pub last_refreshed_at: chrono::NaiveDateTime,
 }
 
-#[derive(Insertable, AsChangeset, Clone, Serialize, Deserialize)]
+// TODO add better delete, remove, lock actions here.
+#[derive(Insertable, AsChangeset, Clone, Serialize, Deserialize, Debug)]
 #[table_name = "community"]
 pub struct CommunityForm {
   pub name: String,
@@ -26,9 +36,15 @@ pub struct CommunityForm {
   pub category_id: i32,
   pub creator_id: i32,
   pub removed: Option<bool>,
+  pub published: Option<chrono::NaiveDateTime>,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: Option<bool>,
   pub nsfw: bool,
+  pub actor_id: String,
+  pub local: bool,
+  pub private_key: Option<String>,
+  pub public_key: Option<String>,
+  pub last_refreshed_at: Option<chrono::NaiveDateTime>,
 }
 
 impl Crud<CommunityForm> for Community {
@@ -62,15 +78,23 @@ impl Crud<CommunityForm> for Community {
 }
 
 impl Community {
-  pub fn read_from_name(conn: &PgConnection, community_name: String) -> Result<Self, Error> {
+  pub fn read_from_name(conn: &PgConnection, community_name: &str) -> Result<Self, Error> {
     use crate::schema::community::dsl::*;
     community
       .filter(name.eq(community_name))
       .first::<Self>(conn)
   }
 
-  pub fn get_url(&self) -> String {
-    format!("https://{}/c/{}", Settings::get().hostname, self.name)
+  pub fn read_from_actor_id(conn: &PgConnection, community_id: &str) -> Result<Self, Error> {
+    use crate::schema::community::dsl::*;
+    community
+      .filter(actor_id.eq(community_id))
+      .first::<Self>(conn)
+  }
+
+  pub fn list_local(conn: &PgConnection) -> Result<Vec<Self>, Error> {
+    use crate::schema::community::dsl::*;
+    community.filter(local.eq(true)).load::<Community>(conn)
   }
 }
 
@@ -192,7 +216,7 @@ impl Followable<CommunityFollowerForm> for CommunityFollower {
       .values(community_follower_form)
       .get_result::<Self>(conn)
   }
-  fn ignore(
+  fn unfollow(
     conn: &PgConnection,
     community_follower_form: &CommunityFollowerForm,
   ) -> Result<usize, Error> {
@@ -208,15 +232,15 @@ impl Followable<CommunityFollowerForm> for CommunityFollower {
 
 #[cfg(test)]
 mod tests {
-  use super::super::user::*;
-  use super::*;
+  use super::{super::user::*, *};
+  use crate::db::{establish_unpooled_connection, ListingType, SortType};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let new_user = UserForm {
       name: "bobbee".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -232,6 +256,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -246,6 +276,12 @@ mod tests {
       removed: None,
       deleted: None,
       updated: None,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -262,6 +298,11 @@ mod tests {
       deleted: false,
       published: inserted_community.published,
       updated: None,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: inserted_community.published,
     };
 
     let community_follower_form = CommunityFollowerForm {
@@ -311,7 +352,7 @@ mod tests {
     let read_community = Community::read(&conn, inserted_community.id).unwrap();
     let updated_community =
       Community::update(&conn, inserted_community.id, &new_community).unwrap();
-    let ignored_community = CommunityFollower::ignore(&conn, &community_follower_form).unwrap();
+    let ignored_community = CommunityFollower::unfollow(&conn, &community_follower_form).unwrap();
     let left_community = CommunityModerator::leave(&conn, &community_user_form).unwrap();
     let unban = CommunityUserBan::unban(&conn, &community_user_ban_form).unwrap();
     let num_deleted = Community::delete(&conn, inserted_community.id).unwrap();

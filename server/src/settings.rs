@@ -1,10 +1,7 @@
 use config::{Config, ConfigError, Environment, File};
 use failure::Error;
 use serde::Deserialize;
-use std::env;
-use std::fs;
-use std::net::IpAddr;
-use std::sync::RwLock;
+use std::{env, fs, net::IpAddr, sync::RwLock};
 
 static CONFIG_FILE_DEFAULTS: &str = "config/defaults.hjson";
 static CONFIG_FILE: &str = "config/config.hjson";
@@ -20,6 +17,7 @@ pub struct Settings {
   pub front_end_dir: String,
   pub rate_limit: RateLimitConfig,
   pub email: Option<EmailConfig>,
+  pub federation: Federation,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -57,6 +55,13 @@ pub struct Database {
   pub port: i32,
   pub database: String,
   pub pool_size: u32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Federation {
+  pub enabled: bool,
+  pub tls_enabled: bool,
+  pub allowed_instances: String,
 }
 
 lazy_static! {

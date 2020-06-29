@@ -1,6 +1,7 @@
 use super::community_view::community_mview::BoxedQuery;
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{fuzzy_search, limit_and_offset, MaybeOptional, SortType};
+use diesel::{pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 table! {
   community_view (id) {
@@ -15,6 +16,11 @@ table! {
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
     nsfw -> Bool,
+    actor_id -> Text,
+    local -> Bool,
+    last_refreshed_at -> Timestamp,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
     category_name -> Varchar,
@@ -40,6 +46,11 @@ table! {
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
     nsfw -> Bool,
+    actor_id -> Text,
+    local -> Bool,
+    last_refreshed_at -> Timestamp,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
     category_name -> Varchar,
@@ -58,8 +69,12 @@ table! {
     community_id -> Int4,
     user_id -> Int4,
     published -> Timestamp,
+    user_actor_id -> Text,
+    user_local -> Bool,
     user_name -> Varchar,
     avatar -> Nullable<Text>,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
   }
 }
@@ -70,8 +85,12 @@ table! {
     community_id -> Int4,
     user_id -> Int4,
     published -> Timestamp,
+    user_actor_id -> Text,
+    user_local -> Bool,
     user_name -> Varchar,
     avatar -> Nullable<Text>,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
   }
 }
@@ -82,8 +101,12 @@ table! {
     community_id -> Int4,
     user_id -> Int4,
     published -> Timestamp,
+    user_actor_id -> Text,
+    user_local -> Bool,
     user_name -> Varchar,
     avatar -> Nullable<Text>,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
   }
 }
@@ -104,6 +127,11 @@ pub struct CommunityView {
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
   pub nsfw: bool,
+  pub actor_id: String,
+  pub local: bool,
+  pub last_refreshed_at: chrono::NaiveDateTime,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub creator_name: String,
   pub creator_avatar: Option<String>,
   pub category_name: String,
@@ -257,8 +285,12 @@ pub struct CommunityModeratorView {
   pub community_id: i32,
   pub user_id: i32,
   pub published: chrono::NaiveDateTime,
+  pub user_actor_id: String,
+  pub user_local: bool,
   pub user_name: String,
   pub avatar: Option<String>,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
 }
 
@@ -287,8 +319,12 @@ pub struct CommunityFollowerView {
   pub community_id: i32,
   pub user_id: i32,
   pub published: chrono::NaiveDateTime,
+  pub user_actor_id: String,
+  pub user_local: bool,
   pub user_name: String,
   pub avatar: Option<String>,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
 }
 
@@ -317,8 +353,12 @@ pub struct CommunityUserBanView {
   pub community_id: i32,
   pub user_id: i32,
   pub published: chrono::NaiveDateTime,
+  pub user_actor_id: String,
+  pub user_local: bool,
   pub user_name: String,
   pub avatar: Option<String>,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
 }
 

@@ -582,7 +582,10 @@ export function setupTribute(): Tribute {
       {
         trigger: '@',
         selectTemplate: (item: any) => {
-          return `[/u/${item.original.key}](/u/${item.original.key})`;
+          let link = item.original.local
+            ? `[${item.original.key}](/u/${item.original.name})`
+            : `[${item.original.key}](/user/${item.original.id})`;
+          return link;
         },
         values: (text: string, cb: any) => {
           userSearch(text, (users: any) => cb(users));
@@ -595,9 +598,12 @@ export function setupTribute(): Tribute {
 
       // Communities
       {
-        trigger: '#',
+        trigger: '!',
         selectTemplate: (item: any) => {
-          return `[/c/${item.original.key}](/c/${item.original.key})`;
+          let link = item.original.local
+            ? `[${item.original.key}](/c/${item.original.name})`
+            : `[${item.original.key}](/community/${item.original.id})`;
+          return link;
         },
         values: (text: string, cb: any) => {
           communitySearch(text, (communities: any) => cb(communities));
@@ -640,7 +646,12 @@ function userSearch(text: string, cb: any) {
         if (res.op == UserOperation.Search) {
           let data = res.data as SearchResponse;
           let users = data.users.map(u => {
-            return { key: u.name };
+            return {
+              key: `@${u.name}@${hostname(u.actor_id)}`,
+              name: u.name,
+              local: u.local,
+              id: u.id,
+            };
           });
           cb(users);
           this.userSub.unsubscribe();
@@ -671,8 +682,13 @@ function communitySearch(text: string, cb: any) {
         let res = wsJsonToRes(msg);
         if (res.op == UserOperation.Search) {
           let data = res.data as SearchResponse;
-          let communities = data.communities.map(u => {
-            return { key: u.name };
+          let communities = data.communities.map(c => {
+            return {
+              key: `!${c.name}@${hostname(c.actor_id)}`,
+              name: c.name,
+              local: c.local,
+              id: c.id,
+            };
           });
           cb(communities);
           this.communitySub.unsubscribe();
@@ -921,6 +937,13 @@ export function previewLines(text: string, lines: number = 3): string {
     .split('\n')
     .slice(0, lines * 2)
     .join('\n');
+}
+
+export function hostname(url: string): string {
+  let cUrl = new URL(url);
+  return window.location.port
+    ? `${cUrl.hostname}:${cUrl.port}`
+    : `${cUrl.hostname}`;
 }
 
 function canUseWebP() {

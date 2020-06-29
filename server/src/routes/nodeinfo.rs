@@ -1,4 +1,13 @@
-use super::*;
+use crate::{
+  apub::get_apub_protocol_string,
+  db::site_view::SiteView,
+  routes::DbPoolParam,
+  version,
+  Settings,
+};
+use actix_web::{body::Body, error::ErrorBadRequest, *};
+use serde::{Deserialize, Serialize};
+use url::Url;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
   cfg
@@ -6,26 +15,32 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     .route("/.well-known/nodeinfo", web::get().to(node_info_well_known));
 }
 
-async fn node_info_well_known() -> HttpResponse<Body> {
+async fn node_info_well_known() -> Result<HttpResponse<Body>, failure::Error> {
   let node_info = NodeInfoWellKnown {
     links: NodeInfoWellKnownLinks {
-      rel: "http://nodeinfo.diaspora.software/ns/schema/2.0".to_string(),
-      href: format!("https://{}/nodeinfo/2.0.json", Settings::get().hostname),
+      rel: Url::parse("http://nodeinfo.diaspora.software/ns/schema/2.0")?,
+      href: Url::parse(&format!(
+        "{}://{}/nodeinfo/2.0.json",
+        get_apub_protocol_string(),
+        Settings::get().hostname
+      ))?,
     },
   };
-  HttpResponse::Ok().json(node_info)
+  Ok(HttpResponse::Ok().json(node_info))
 }
 
-async fn node_info(
-  db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-) -> Result<HttpResponse, Error> {
+async fn node_info(db: DbPoolParam) -> Result<HttpResponse, Error> {
   let res = web::block(move || {
     let conn = db.get()?;
     let site_view = match SiteView::read(&conn) {
       Ok(site_view) => site_view,
       Err(_) => return Err(format_err!("not_found")),
     };
-    let protocols = vec![];
+    let protocols = if Settings::get().federation.enabled {
+      vec!["activitypub".to_string()]
+    } else {
+      vec![]
+    };
     Ok(NodeInfo {
       version: "2.0".to_string(),
       software: NodeInfoSoftware {
@@ -49,41 +64,41 @@ async fn node_info(
   Ok(res)
 }
 
-#[derive(Serialize)]
-struct NodeInfoWellKnown {
-  links: NodeInfoWellKnownLinks,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NodeInfoWellKnown {
+  pub links: NodeInfoWellKnownLinks,
 }
 
-#[derive(Serialize)]
-struct NodeInfoWellKnownLinks {
-  rel: String,
-  href: String,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NodeInfoWellKnownLinks {
+  pub rel: Url,
+  pub href: Url,
 }
 
-#[derive(Serialize)]
-struct NodeInfo {
-  version: String,
-  software: NodeInfoSoftware,
-  protocols: Vec<String>,
-  usage: NodeInfoUsage,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NodeInfo {
+  pub version: String,
+  pub software: NodeInfoSoftware,
+  pub protocols: Vec<String>,
+  pub usage: NodeInfoUsage,
 }
 
-#[derive(Serialize)]
-struct NodeInfoSoftware {
-  name: String,
-  version: String,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NodeInfoSoftware {
+  pub name: String,
+  pub version: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct NodeInfoUsage {
-  users: NodeInfoUsers,
-  local_posts: i64,
-  local_comments: i64,
-  open_registrations: bool,
+pub struct NodeInfoUsage {
+  pub users: NodeInfoUsers,
+  pub local_posts: i64,
+  pub local_comments: i64,
+  pub open_registrations: bool,
 }
 
-#[derive(Serialize)]
-struct NodeInfoUsers {
-  total: i64,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NodeInfoUsers {
+  pub total: i64,
 }

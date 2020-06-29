@@ -1,5 +1,36 @@
 use super::user::Register;
-use super::*;
+use crate::{
+  api::{APIError, Oper, Perform},
+  apub::fetcher::search_by_apub_id,
+  db::{
+    category::*,
+    comment_view::*,
+    community_view::*,
+    moderator::*,
+    moderator_views::*,
+    post_view::*,
+    site::*,
+    site_view::*,
+    user::*,
+    user_view::*,
+    Crud,
+    SearchType,
+    SortType,
+  },
+  naive_now,
+  settings::Settings,
+  slur_check,
+  slurs_vec_to_str,
+  websocket::{server::SendAllMessage, UserOperation, WebsocketInfo},
+};
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
+use failure::Error;
+use log::{debug, info};
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
 pub struct ListCategories {}
@@ -9,7 +40,7 @@ pub struct ListCategoriesResponse {
   categories: Vec<Category>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Search {
   q: String,
   type_: String,
@@ -20,13 +51,13 @@ pub struct Search {
   auth: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SearchResponse {
-  type_: String,
-  comments: Vec<CommentView>,
-  posts: Vec<PostView>,
-  communities: Vec<CommunityView>,
-  users: Vec<UserView>,
+  pub type_: String,
+  pub comments: Vec<CommentView>,
+  pub posts: Vec<PostView>,
+  pub communities: Vec<CommunityView>,
+  pub users: Vec<UserView>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -342,8 +373,7 @@ impl Perform for Oper<GetSite> {
     let conn = pool.get()?;
 
     // TODO refactor this a little
-    let site = Site::read(&conn, 1);
-    let site_view = if site.is_ok() {
+    let site_view = if let Ok(_site) = Site::read(&conn, 1) {
       Some(SiteView::read(&conn)?)
     } else if let Some(setup) = Settings::get().setup.as_ref() {
       let register = Register {
@@ -360,9 +390,9 @@ impl Perform for Oper<GetSite> {
       let create_site = CreateSite {
         name: setup.site_name.to_owned(),
         description: None,
-        enable_downvotes: false,
-        open_registration: false,
-        enable_nsfw: false,
+        enable_downvotes: true,
+        open_registration: true,
+        enable_nsfw: true,
         auth: login_response.jwt,
       };
       Oper::new(create_site).perform(pool, websocket_info.clone())?;
@@ -373,11 +403,16 @@ impl Perform for Oper<GetSite> {
     };
 
     let mut admins = UserView::admins(&conn)?;
-    if site_view.is_some() {
-      let site_creator_id = site_view.to_owned().unwrap().creator_id;
-      let creator_index = admins.iter().position(|r| r.id == site_creator_id).unwrap();
-      let creator_user = admins.remove(creator_index);
-      admins.insert(0, creator_user);
+
+    // Make sure the site creator is the top admin
+    if let Some(site_view) = site_view.to_owned() {
+      let site_creator_id = site_view.creator_id;
+      // TODO investigate why this is sometimes coming back null
+      // Maybe user_.admin isn't being set to true?
+      if let Some(creator_index) = admins.iter().position(|r| r.id == site_creator_id) {
+        let creator_user = admins.remove(creator_index);
+        admins.insert(0, creator_user);
+      }
     }
 
     let banned = UserView::banned(&conn)?;
@@ -412,6 +447,15 @@ impl Perform for Oper<Search> {
   ) -> Result<SearchResponse, Error> {
     let data: &Search = &self.data;
 
+    dbg!(&data);
+
+    let conn = pool.get()?;
+
+    match search_by_apub_id(&data.q, &conn) {
+      Ok(r) => return Ok(r),
+      Err(e) => debug!("Failed to resolve search query as activitypub ID: {}", e),
+    }
+
     let user_id: Option<i32> = match &data.auth {
       Some(auth) => match Claims::decode(&auth) {
         Ok(claims) => {
@@ -432,8 +476,6 @@ impl Perform for Oper<Search> {
     let mut users = Vec::new();
 
     // TODO no clean / non-nsfw searching rn
-
-    let conn = pool.get()?;
 
     match type_ {
       SearchType::Posts => {

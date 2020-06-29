@@ -1,5 +1,12 @@
-use super::*;
-use crate::websocket::server::*;
+use crate::{
+  get_ip,
+  websocket::server::{ChatServer, *},
+};
+use actix::prelude::*;
+use actix_web::*;
+use actix_web_actors::ws;
+use log::{debug, error, info};
+use std::time::{Duration, Instant};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -32,7 +39,6 @@ struct WSSession {
   /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
   /// otherwise we drop connection.
   hb: Instant,
-  // db: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl Actor for WSSession {
@@ -144,7 +150,7 @@ impl WSSession {
       // check client heartbeats
       if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
         // heartbeat timed out
-        error!("Websocket Client heartbeat failed, disconnecting!");
+        debug!("Websocket Client heartbeat failed, disconnecting!");
 
         // notify chat server
         act.cs_addr.do_send(Disconnect {

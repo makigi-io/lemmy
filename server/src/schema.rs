@@ -1,4 +1,15 @@
 table! {
+    activity (id) {
+        id -> Int4,
+        user_id -> Int4,
+        data -> Jsonb,
+        local -> Bool,
+        published -> Timestamp,
+        updated -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     category (id) {
         id -> Int4,
         name -> Varchar,
@@ -17,6 +28,8 @@ table! {
         published -> Timestamp,
         updated -> Nullable<Timestamp>,
         deleted -> Bool,
+        ap_id -> Varchar,
+        local -> Bool,
     }
 }
 
@@ -53,6 +66,11 @@ table! {
         updated -> Nullable<Timestamp>,
         deleted -> Bool,
         nsfw -> Bool,
+        actor_id -> Varchar,
+        local -> Bool,
+        private_key -> Nullable<Text>,
+        public_key -> Nullable<Text>,
+        last_refreshed_at -> Timestamp,
     }
 }
 
@@ -211,6 +229,8 @@ table! {
         embed_description -> Nullable<Text>,
         embed_html -> Nullable<Text>,
         thumbnail_url -> Nullable<Text>,
+        ap_id -> Varchar,
+        local -> Bool,
     }
 }
 
@@ -252,6 +272,8 @@ table! {
         read -> Bool,
         published -> Timestamp,
         updated -> Nullable<Timestamp>,
+        ap_id -> Varchar,
+        local -> Bool,
     }
 }
 
@@ -273,7 +295,6 @@ table! {
     user_ (id) {
         id -> Int4,
         name -> Varchar,
-        fedi_name -> Varchar,
         preferred_username -> Nullable<Varchar>,
         password_encrypted -> Text,
         email -> Nullable<Text>,
@@ -290,6 +311,12 @@ table! {
         show_avatars -> Bool,
         send_notifications_to_email -> Bool,
         matrix_user_id -> Nullable<Text>,
+        actor_id -> Varchar,
+        bio -> Nullable<Text>,
+        local -> Bool,
+        private_key -> Nullable<Text>,
+        public_key -> Nullable<Text>,
+        last_refreshed_at -> Timestamp,
     }
 }
 
@@ -311,6 +338,7 @@ table! {
     }
 }
 
+joinable!(activity -> user_ (user_id));
 joinable!(comment -> post (post_id));
 joinable!(comment -> user_ (creator_id));
 joinable!(comment_like -> comment (comment_id));
@@ -353,6 +381,7 @@ joinable!(user_mention -> comment (comment_id));
 joinable!(user_mention -> user_ (recipient_id));
 
 allow_tables_to_appear_in_same_query!(
+  activity,
   category,
   comment,
   comment_like,

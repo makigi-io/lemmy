@@ -1,5 +1,6 @@
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{limit_and_offset, MaybeOptional, SortType};
+use diesel::{dsl::*, pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 // The faked schema since diesel doesn't do views
 table! {
@@ -7,6 +8,8 @@ table! {
     id -> Int4,
     user_mention_id -> Int4,
     creator_id -> Int4,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     post_id -> Int4,
     parent_id -> Nullable<Int4>,
     content -> Text,
@@ -16,6 +19,8 @@ table! {
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
     community_id -> Int4,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     banned -> Bool,
     banned_from_community -> Bool,
@@ -29,6 +34,8 @@ table! {
     my_vote -> Nullable<Int4>,
     saved -> Nullable<Bool>,
     recipient_id -> Int4,
+    recipient_actor_id -> Text,
+    recipient_local -> Bool,
   }
 }
 
@@ -37,6 +44,8 @@ table! {
     id -> Int4,
     user_mention_id -> Int4,
     creator_id -> Int4,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     post_id -> Int4,
     parent_id -> Nullable<Int4>,
     content -> Text,
@@ -46,6 +55,8 @@ table! {
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
     community_id -> Int4,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     banned -> Bool,
     banned_from_community -> Bool,
@@ -59,6 +70,8 @@ table! {
     my_vote -> Nullable<Int4>,
     saved -> Nullable<Bool>,
     recipient_id -> Int4,
+    recipient_actor_id -> Text,
+    recipient_local -> Bool,
   }
 }
 
@@ -70,6 +83,8 @@ pub struct UserMentionView {
   pub id: i32,
   pub user_mention_id: i32,
   pub creator_id: i32,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub post_id: i32,
   pub parent_id: Option<i32>,
   pub content: String,
@@ -79,6 +94,8 @@ pub struct UserMentionView {
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
   pub community_id: i32,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
   pub banned: bool,
   pub banned_from_community: bool,
@@ -92,6 +109,8 @@ pub struct UserMentionView {
   pub my_vote: Option<i32>,
   pub saved: Option<bool>,
   pub recipient_id: i32,
+  pub recipient_actor_id: String,
+  pub recipient_local: bool,
 }
 
 pub struct UserMentionQueryBuilder<'a> {

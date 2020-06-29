@@ -1,6 +1,9 @@
-use super::post::Post;
-use super::*;
-use crate::schema::{comment, comment_like, comment_saved};
+use super::{post::Post, *};
+use crate::{
+  apub::{make_apub_endpoint, EndpointType},
+  naive_now,
+  schema::{comment, comment_like, comment_saved},
+};
 
 // WITH RECURSIVE MyTree AS (
 //     SELECT * FROM comment WHERE parent_id IS NULL
@@ -19,10 +22,12 @@ pub struct Comment {
   pub parent_id: Option<i32>,
   pub content: String,
   pub removed: bool,
-  pub read: bool,
+  pub read: bool, // Whether the recipient has read the comment or not
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
+  pub ap_id: String,
+  pub local: bool,
 }
 
 #[derive(Insertable, AsChangeset, Clone)]
@@ -34,8 +39,11 @@ pub struct CommentForm {
   pub content: String,
   pub removed: Option<bool>,
   pub read: Option<bool>,
+  pub published: Option<chrono::NaiveDateTime>,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: Option<bool>,
+  pub ap_id: String,
+  pub local: bool,
 }
 
 impl Crud<CommentForm> for Comment {
@@ -64,6 +72,42 @@ impl Crud<CommentForm> for Comment {
     use crate::schema::comment::dsl::*;
     diesel::update(comment.find(comment_id))
       .set(comment_form)
+      .get_result::<Self>(conn)
+  }
+}
+
+impl Comment {
+  pub fn update_ap_id(conn: &PgConnection, comment_id: i32) -> Result<Self, Error> {
+    use crate::schema::comment::dsl::*;
+
+    let apid = make_apub_endpoint(EndpointType::Comment, &comment_id.to_string()).to_string();
+    diesel::update(comment.find(comment_id))
+      .set(ap_id.eq(apid))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn read_from_apub_id(conn: &PgConnection, object_id: &str) -> Result<Self, Error> {
+    use crate::schema::comment::dsl::*;
+    comment.filter(ap_id.eq(object_id)).first::<Self>(conn)
+  }
+
+  pub fn mark_as_read(conn: &PgConnection, comment_id: i32) -> Result<Self, Error> {
+    use crate::schema::comment::dsl::*;
+
+    diesel::update(comment.find(comment_id))
+      .set(read.eq(true))
+      .get_result::<Self>(conn)
+  }
+
+  pub fn permadelete(conn: &PgConnection, comment_id: i32) -> Result<Self, Error> {
+    use crate::schema::comment::dsl::*;
+
+    diesel::update(comment.find(comment_id))
+      .set((
+        content.eq("*Permananently Deleted*"),
+        deleted.eq(true),
+        updated.eq(naive_now()),
+      ))
       .get_result::<Self>(conn)
   }
 }
@@ -160,17 +204,16 @@ impl Saveable<CommentSavedForm> for CommentSaved {
 
 #[cfg(test)]
 mod tests {
-  use super::super::community::*;
-  use super::super::post::*;
-  use super::super::user::*;
-  use super::*;
+  use super::{
+    super::{community::*, post::*, user::*},
+    *,
+  };
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let new_user = UserForm {
       name: "terry".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -186,6 +229,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -200,6 +249,12 @@ mod tests {
       deleted: None,
       updated: None,
       nsfw: false,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -220,6 +275,9 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = Post::create(&conn, &new_post).unwrap();
@@ -232,7 +290,10 @@ mod tests {
       deleted: None,
       read: None,
       parent_id: None,
+      published: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let inserted_comment = Comment::create(&conn, &comment_form).unwrap();
@@ -248,6 +309,8 @@ mod tests {
       parent_id: None,
       published: inserted_comment.published,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let child_comment_form = CommentForm {
@@ -258,7 +321,10 @@ mod tests {
       removed: None,
       deleted: None,
       read: None,
+      published: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let inserted_child_comment = Comment::create(&conn, &child_comment_form).unwrap();

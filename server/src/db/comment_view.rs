@@ -1,5 +1,6 @@
-use super::*;
-use diesel::pg::Pg;
+use crate::db::{fuzzy_search, limit_and_offset, ListingType, MaybeOptional, SortType};
+use diesel::{dsl::*, pg::Pg, result::Error, *};
+use serde::{Deserialize, Serialize};
 
 // The faked schema since diesel doesn't do views
 table! {
@@ -14,10 +15,16 @@ table! {
     published -> Timestamp,
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
+    ap_id -> Text,
+    local -> Bool,
     community_id -> Int4,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     banned -> Bool,
     banned_from_community -> Bool,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
     score -> BigInt,
@@ -43,10 +50,16 @@ table! {
     published -> Timestamp,
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
+    ap_id -> Text,
+    local -> Bool,
     community_id -> Int4,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     banned -> Bool,
     banned_from_community -> Bool,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
     score -> BigInt,
@@ -75,10 +88,16 @@ pub struct CommentView {
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
+  pub ap_id: String,
+  pub local: bool,
   pub community_id: i32,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
   pub banned: bool,
   pub banned_from_community: bool,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub creator_name: String,
   pub creator_avatar: Option<String>,
   pub score: i64,
@@ -282,10 +301,16 @@ table! {
     published -> Timestamp,
     updated -> Nullable<Timestamp>,
     deleted -> Bool,
+    ap_id -> Text,
+    local -> Bool,
     community_id -> Int4,
+    community_actor_id -> Text,
+    community_local -> Bool,
     community_name -> Varchar,
     banned -> Bool,
     banned_from_community -> Bool,
+    creator_actor_id -> Text,
+    creator_local -> Bool,
     creator_name -> Varchar,
     creator_avatar -> Nullable<Text>,
     score -> BigInt,
@@ -315,10 +340,16 @@ pub struct ReplyView {
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: bool,
+  pub ap_id: String,
+  pub local: bool,
   pub community_id: i32,
+  pub community_actor_id: String,
+  pub community_local: bool,
   pub community_name: String,
   pub banned: bool,
   pub banned_from_community: bool,
+  pub creator_actor_id: String,
+  pub creator_local: bool,
   pub creator_name: String,
   pub creator_avatar: Option<String>,
   pub score: i64,
@@ -423,18 +454,18 @@ impl<'a> ReplyQueryBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-  use super::super::comment::*;
-  use super::super::community::*;
-  use super::super::post::*;
-  use super::super::user::*;
-  use super::*;
+  use super::{
+    super::{comment::*, community::*, post::*, user::*},
+    *,
+  };
+  use crate::db::{establish_unpooled_connection, Crud, Likeable};
+
   #[test]
   fn test_crud() {
     let conn = establish_unpooled_connection();
 
     let new_user = UserForm {
       name: "timmy".into(),
-      fedi_name: "rrf".into(),
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
@@ -450,6 +481,12 @@ mod tests {
       lang: "browser".into(),
       show_avatars: true,
       send_notifications_to_email: false,
+      actor_id: "http://fake.com".into(),
+      bio: None,
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
     };
 
     let inserted_user = User_::create(&conn, &new_user).unwrap();
@@ -464,6 +501,12 @@ mod tests {
       deleted: None,
       updated: None,
       nsfw: false,
+      actor_id: "http://fake.com".into(),
+      local: true,
+      private_key: None,
+      public_key: None,
+      last_refreshed_at: None,
+      published: None,
     };
 
     let inserted_community = Community::create(&conn, &new_community).unwrap();
@@ -484,6 +527,9 @@ mod tests {
       embed_description: None,
       embed_html: None,
       thumbnail_url: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = Post::create(&conn, &new_post).unwrap();
@@ -496,7 +542,10 @@ mod tests {
       removed: None,
       deleted: None,
       read: None,
+      published: None,
       updated: None,
+      ap_id: "http://fake.com".into(),
+      local: true,
     };
 
     let inserted_comment = Comment::create(&conn, &comment_form).unwrap();
@@ -535,6 +584,12 @@ mod tests {
       my_vote: None,
       subscribed: None,
       saved: None,
+      ap_id: "http://fake.com".to_string(),
+      local: true,
+      community_actor_id: inserted_community.actor_id.to_owned(),
+      community_local: true,
+      creator_actor_id: inserted_user.actor_id.to_owned(),
+      creator_local: true,
     };
 
     let expected_comment_view_with_user = CommentView {
@@ -562,6 +617,12 @@ mod tests {
       my_vote: Some(1),
       subscribed: None,
       saved: None,
+      ap_id: "http://fake.com".to_string(),
+      local: true,
+      community_actor_id: inserted_community.actor_id.to_owned(),
+      community_local: true,
+      creator_actor_id: inserted_user.actor_id.to_owned(),
+      creator_local: true,
     };
 
     let mut read_comment_views_no_user = CommentQueryBuilder::create(&conn)

@@ -1,6 +1,41 @@
-use super::*;
+use crate::{
+  api::{APIError, Oper, Perform},
+  apub::{ApubLikeableType, ApubObjectType},
+  db::{
+    comment_view::*,
+    community_view::*,
+    moderator::*,
+    post::*,
+    post_view::*,
+    site::*,
+    site_view::*,
+    user::*,
+    user_view::*,
+    Crud,
+    Likeable,
+    ListingType,
+    Saveable,
+    SortType,
+  },
+  fetch_iframely_and_pictrs_data,
+  naive_now,
+  slur_check,
+  slurs_vec_to_str,
+  websocket::{
+    server::{JoinCommunityRoom, JoinPostRoom, SendPost},
+    UserOperation,
+    WebsocketInfo,
+  },
+};
+use diesel::{
+  r2d2::{ConnectionManager, Pool},
+  PgConnection,
+};
+use failure::Error;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CreatePost {
   name: String,
   url: Option<String>,
@@ -31,7 +66,7 @@ pub struct GetPostResponse {
   pub online: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GetPosts {
   type_: String,
   sort: String,
@@ -41,9 +76,9 @@ pub struct GetPosts {
   auth: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GetPostsResponse {
-  posts: Vec<PostView>,
+  pub posts: Vec<PostView>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -112,7 +147,8 @@ impl Perform for Oper<CreatePost> {
     }
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
@@ -136,6 +172,9 @@ impl Perform for Oper<CreatePost> {
       embed_description: iframely_description,
       embed_html: iframely_html,
       thumbnail_url: pictrs_thumbnail,
+      ap_id: "http://fake.com".into(),
+      local: true,
+      published: None,
     };
 
     let inserted_post = match Post::create(&conn, &post_form) {
@@ -151,6 +190,13 @@ impl Perform for Oper<CreatePost> {
       }
     };
 
+    let updated_post = match Post::update_ap_id(&conn, inserted_post.id) {
+      Ok(post) => post,
+      Err(_e) => return Err(APIError::err("couldnt_create_post").into()),
+    };
+
+    updated_post.send_create(&user, &conn)?;
+
     // They like their own post by default
     let like_form = PostLikeForm {
       post_id: inserted_post.id,
@@ -158,11 +204,12 @@ impl Perform for Oper<CreatePost> {
       score: 1,
     };
 
-    // Only add the like if the score isnt 0
     let _inserted_like = match PostLike::like(&conn, &like_form) {
       Ok(like) => like,
       Err(_e) => return Err(APIError::err("couldnt_like_post").into()),
     };
+
+    updated_post.send_like(&user, &conn)?;
 
     // Refetch the view
     let post_view = match PostView::read(&conn, inserted_post.id, Some(user_id)) {
@@ -357,7 +404,8 @@ impl Perform for Oper<CreatePostLike> {
     }
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
@@ -377,6 +425,14 @@ impl Perform for Oper<CreatePostLike> {
         Ok(like) => like,
         Err(_e) => return Err(APIError::err("couldnt_like_post").into()),
       };
+
+      if like_form.score == 1 {
+        post.send_like(&user, &conn)?;
+      } else if like_form.score == -1 {
+        post.send_dislike(&user, &conn)?;
+      }
+    } else {
+      post.send_undo_like(&user, &conn)?;
     }
 
     let post_view = match PostView::read(&conn, data.post_id, Some(user_id)) {
@@ -446,13 +502,16 @@ impl Perform for Oper<EditPost> {
     }
 
     // Check for a site ban
-    if UserView::read(&conn, user_id)?.banned {
+    let user = User_::read(&conn, user_id)?;
+    if user.banned {
       return Err(APIError::err("site_ban").into());
     }
 
     // Fetch Iframely and Pictrs cached image
     let (iframely_title, iframely_description, iframely_html, pictrs_thumbnail) =
       fetch_iframely_and_pictrs_data(data.url.to_owned());
+
+    let read_post = Post::read(&conn, data.edit_id)?;
 
     let post_form = PostForm {
       name: data.name.to_owned(),
@@ -470,9 +529,12 @@ impl Perform for Oper<EditPost> {
       embed_description: iframely_description,
       embed_html: iframely_html,
       thumbnail_url: pictrs_thumbnail,
+      ap_id: read_post.ap_id,
+      local: read_post.local,
+      published: None,
     };
 
-    let _updated_post = match Post::update(&conn, data.edit_id, &post_form) {
+    let updated_post = match Post::update(&conn, data.edit_id, &post_form) {
       Ok(post) => post,
       Err(e) => {
         let err_type = if e.to_string() == "value too long for type character varying(200)" {
@@ -512,6 +574,22 @@ impl Perform for Oper<EditPost> {
         stickied: Some(stickied),
       };
       ModStickyPost::create(&conn, &form)?;
+    }
+
+    if let Some(deleted) = data.deleted.to_owned() {
+      if deleted {
+        updated_post.send_delete(&user, &conn)?;
+      } else {
+        updated_post.send_undo_delete(&user, &conn)?;
+      }
+    } else if let Some(removed) = data.removed.to_owned() {
+      if removed {
+        updated_post.send_remove(&user, &conn)?;
+      } else {
+        updated_post.send_undo_remove(&user, &conn)?;
+      }
+    } else {
+      updated_post.send_update(&user, &conn)?;
     }
 
     let post_view = PostView::read(&conn, data.edit_id, Some(user_id))?;

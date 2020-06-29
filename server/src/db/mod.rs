@@ -1,10 +1,10 @@
 use crate::settings::Settings;
-use diesel::dsl::*;
-use diesel::result::Error;
-use diesel::*;
+use diesel::{dsl::*, result::Error, *};
 use serde::{Deserialize, Serialize};
 
+pub mod activity;
 pub mod category;
+pub mod code_migrations;
 pub mod comment;
 pub mod comment_view;
 pub mod community;
@@ -42,7 +42,7 @@ pub trait Followable<T> {
   fn follow(conn: &PgConnection, form: &T) -> Result<Self, Error>
   where
     Self: Sized;
-  fn ignore(conn: &PgConnection, form: &T) -> Result<usize, Error>
+  fn unfollow(conn: &PgConnection, form: &T) -> Result<usize, Error>
   where
     Self: Sized;
 }
