@@ -10,6 +10,7 @@ interface SilverUser {
 }
 
 let general = [
+  'dude in phx',
   'twilight loki',
   'Andrew Plaza',
   'Jonathan Cremin',
@@ -20,11 +21,8 @@ let general = [
   'Andre Vallestero',
   'NotTooHighToHack',
 ];
-let highlighted = ['Oskenso Kashi', 'Alex Benishek'];
+let highlighted = ['DiscountFuneral', 'Oskenso Kashi', 'Alex Benishek'];
 let silver: Array<SilverUser> = [
-  {
-    name: 'DiscountFuneral',
-  },
   {
     name: 'Redjoker',
     link: 'https://iww.org',
