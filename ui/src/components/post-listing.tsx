@@ -273,19 +273,20 @@ export class PostListing extends Component<PostListingProps, PostListingState> {
           >
             {this.state.score}
           </div>
-          {WebSocketService.Instance.site.enable_downvotes && (
-            <button
-              className={`btn-animate btn btn-link p-0 ${
-                this.state.my_vote == -1 ? 'text-danger' : 'text-muted'
-              }`}
-              onClick={linkEvent(this, this.handlePostDisLike)}
-              data-tippy-content={i18n.t('downvote')}
-            >
-              <svg class="icon downvote">
-                <use xlinkHref="#icon-arrow-down1"></use>
-              </svg>
-            </button>
-          )}
+          {WebSocketService.Instance.site.hasOwnProperty('enable_downvotes') &&
+            WebSocketService.Instance.site.enable_downvotes && (
+              <button
+                className={`btn-animate btn btn-link p-0 ${
+                  this.state.my_vote == -1 ? 'text-danger' : 'text-muted'
+                }`}
+                onClick={linkEvent(this, this.handlePostDisLike)}
+                data-tippy-content={i18n.t('downvote')}
+              >
+                <svg class="icon downvote">
+                  <use xlinkHref="#icon-arrow-down1"></use>
+                </svg>
+              </button>
+            )}
         </div>
         {!this.state.imageExpanded && (
           <div class="col-3 col-sm-2 pr-0 mt-1">
