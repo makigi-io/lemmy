@@ -66,9 +66,7 @@ use lettre::{
     extension::ClientId,
     ConnectionReuseParameters,
   },
-  ClientSecurity,
-  SmtpClient,
-  Transport,
+  ClientSecurity, SmtpClient, Transport,
 };
 use lettre_email::Email;
 use log::error;
@@ -325,7 +323,7 @@ pub fn markdown_to_html(text: &str) -> String {
 
 pub fn get_ip(conn_info: &ConnectionInfo) -> String {
   conn_info
-    .remote_addr()
+    .realip_remote_addr()
     .unwrap_or("127.0.0.1:12345")
     .split(':')
     .next()
@@ -371,14 +369,8 @@ pub fn is_valid_community_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
   use crate::{
-    is_email_regex,
-    is_image_content_type,
-    is_valid_community_name,
-    is_valid_username,
-    remove_slurs,
-    scrape_text_for_mentions,
-    slur_check,
-    slurs_vec_to_str,
+    is_email_regex, is_image_content_type, is_valid_community_name, is_valid_username,
+    remove_slurs, scrape_text_for_mentions, slur_check, slurs_vec_to_str,
   };
 
   #[test]
