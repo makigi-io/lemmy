@@ -480,5 +480,5 @@ lazy_static! {
   // static ref WEBFINGER_USER_REGEX: Regex = Regex::new(r"@(?P<name>[\w.]+)@(?P<domain>[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)").unwrap();
   static ref WEBFINGER_USER_REGEX: Regex = Regex::new(r"@(?P<name>[\w.]+)@(?P<domain>[a-zA-Z0-9._:-]+)").unwrap();
   static ref VALID_USERNAME_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9_]{3,20}$").unwrap();
-  static ref VALID_COMMUNITY_REGEX: Regex = Regex::new(r"^([a-z]+((\d)|([A-Z0-9][a-z0-9]+))*([A-Z])?){3,20}$").unwrap();
+  static ref VALID_COMMUNITY_REGEX: Regex = Regex::new(r"^([a-z]+((\d)|([A-Z0-9_]+))*([A-Z])?){3,20}$").unwrap();
 }
