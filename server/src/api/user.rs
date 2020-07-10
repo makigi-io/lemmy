@@ -1,51 +1,24 @@
 use crate::{
   api::{APIError, Oper, Perform},
   apub::{
-    extensions::signatures::generate_actor_keypair,
-    make_apub_endpoint,
-    ApubObjectType,
+    extensions::signatures::generate_actor_keypair, make_apub_endpoint, ApubObjectType,
     EndpointType,
   },
   blocking,
   db::{
-    comment::*,
-    comment_view::*,
-    community::*,
-    community_view::*,
-    moderator::*,
-    password_reset_request::*,
-    post::*,
-    post_view::*,
-    private_message::*,
-    private_message_view::*,
-    site::*,
-    site_view::*,
-    user::*,
-    user_mention::*,
-    user_mention_view::*,
-    user_view::*,
-    Crud,
-    Followable,
-    Joinable,
-    ListingType,
-    SortType,
+    comment::*, comment_view::*, community::*, community_view::*, moderator::*,
+    password_reset_request::*, post::*, post_view::*, private_message::*, private_message_view::*,
+    site::*, site_view::*, user::*, user_mention::*, user_mention_view::*, user_view::*, Crud,
+    Followable, Joinable, ListingType, SortType,
   },
-  generate_random_string,
-  is_valid_username,
-  naive_from_unix,
-  naive_now,
-  remove_slurs,
-  send_email,
+  generate_random_string, is_valid_username, naive_from_unix, naive_now, remove_slurs, send_email,
   settings::Settings,
-  slur_check,
-  slurs_vec_to_str,
+  slur_check, slurs_vec_to_str,
   websocket::{
     server::{JoinUserRoom, SendAllMessage, SendUserRoomMessage},
-    UserOperation,
-    WebsocketInfo,
+    UserOperation, WebsocketInfo,
   },
-  DbPool,
-  LemmyError,
+  DbPool, LemmyError,
 };
 use bcrypt::verify;
 use log::error;
@@ -451,6 +424,11 @@ impl Perform for Oper<SaveUserSettings> {
       None => read_user.email,
     };
 
+    let avatar = match &data.avatar {
+      Some(avatar) => Some(avatar.to_owned()),
+      None => read_user.avatar,
+    };
+
     let password_encrypted = match &data.new_password {
       Some(new_password) => {
         match &data.new_password_verify {
@@ -488,7 +466,7 @@ impl Perform for Oper<SaveUserSettings> {
       name: read_user.name,
       email,
       matrix_user_id: data.matrix_user_id.to_owned(),
-      avatar: data.avatar.to_owned(),
+      avatar,
       password_encrypted,
       preferred_username: read_user.preferred_username,
       updated: Some(naive_now()),

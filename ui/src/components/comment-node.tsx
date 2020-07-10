@@ -158,9 +158,11 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                     id: node.comment.creator_id,
                     local: node.comment.creator_local,
                     actor_id: node.comment.creator_actor_id,
+                    published: node.comment.creator_published,
                   }}
                 />
               </span>
+
               {this.isMod && (
                 <div className="badge badge-light d-none d-sm-inline mr-2">
                   {i18n.t('mod')}
@@ -189,8 +191,8 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                   </Link>
                 </>
               )}
-              <div
-                className="mr-lg-4 flex-grow-1 flex-lg-grow-0 unselectable pointer mx-2"
+              <button
+                class="btn btn-sm text-muted"
                 onClick={linkEvent(this, this.handleCommentCollapse)}
               >
                 {this.state.collapsed ? (
@@ -202,9 +204,11 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                     <use xlinkHref="#icon-minus-square"></use>
                   </svg>
                 )}
-              </div>
-              <span
-                className={`unselectable pointer ${this.scoreColor}`}
+              </button>
+              {/* This is an expanding spacer for mobile */}
+              <div className="mr-lg-4 flex-grow-1 flex-lg-grow-0 unselectable pointer mx-2"></div>
+              <button
+                className={`btn btn-sm p-0 unselectable pointer ${this.scoreColor}`}
                 onClick={linkEvent(node, this.handleCommentUpvote)}
                 data-tippy-content={this.pointsTippy}
               >
@@ -212,7 +216,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                   <use xlinkHref="#icon-zap"></use>
                 </svg>
                 <span class="mr-1">{this.state.score}</span>
-              </span>
+              </button>
               <span className="mr-1">•</span>
               <span>
                 <MomentTime data={node.comment} />

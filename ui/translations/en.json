@@ -26,7 +26,7 @@
     "list_of_communities": "List of communities",
     "number_of_communities": "{{count}} Community",
     "number_of_communities_plural": "{{count}} Communities",
-    "community_reqs": "lowercase, camelCase, and no spaces.",
+    "community_reqs": "lowercase, camelCase, underscores and no spaces.",
     "invalid_community_name": "Invalid name.",
     "create_private_message": "Create Private Message",
     "send_secure_message": "Send Secure Message",
@@ -217,10 +217,10 @@
     "no": "no",
     "powered_by": "Powered by",
     "landing_0":
-      "Lemmy is a <1>link aggregator</1> / reddit alternative, intended to work in the <2>fediverse</2>.<3></3>It's self-hostable, has live-updating comment threads, and is tiny (<4>~80kB</4>). Federation into the ActivityPub network is on the roadmap. <5></5>This is a <6>very early beta version</6>, and a lot of features are currently broken or missing. <7></7>Suggest new features or report bugs <8>here.</8><9></9>Made with <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>.",
-    "landing_1": "<1>board.makigi.io</1> is an anonymous tag based imageboard, has live-updating comment threads. Without registration and profile.",
-    "landing_2": "<14>beta.makigi.io</14> is a link aggregator / / reddit alternative. This is <1>Lemmy</1> fork, intended to work in the <2>fediverse</2>.<3></3>It's self-hostable, has live-updating comment threads, and is tiny (<4>~80kB</4>). Federation into the ActivityPub network is on the roadmap. <5></5>This is a <6>very early beta version</6>, and a lot of features are currently broken or missing. <7></7>Suggest new features or report bugs <8>here.</8><9></9>Made with <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>.",
+      "Lemmy is a <1>link aggregator</1> / reddit alternative, intended to work in the <2>fediverse</2>.<3></3>It's self-hostable, has live-updating comment threads, and is tiny (<4>~80kB</4>). Federation into the ActivityPub network is on the roadmap. <5></5>This is a <6>very early beta version</6>, and a lot of features are currently broken or missing. <7></7>Suggest new features or report bugs <8>here.</8><9></9>Made with <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>. <14></14> <15>Thank you to our contributors: </15> dessalines, Nutomic, asonix, zacanger, and iav.",
+    "not_logged_in": "Not logged in.",
     "logged_in": "Logged in.",
+    "must_login": "You must <1>log in or register</1> to comment.",
     "site_saved": "Site Saved.",
     "community_ban": "You have been banned from this community.",
     "site_ban": "You have been banned from the site",
@@ -266,5 +266,7 @@
     "action": "Action",
     "emoji_picker": "Emoji Picker",
     "block_leaving": "Are you sure you want to leave?",
-    "what_is": "What is"
+    "what_is": "What is",
+    "cake_day_title": "Cake day:",
+    "cake_day_info": "It's {{ creator_name }}'s cake day today!"
 }

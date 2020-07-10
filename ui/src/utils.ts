@@ -51,11 +51,10 @@ import Tribute from 'tributejs/src/Tribute.js';
 import markdown_it from 'markdown-it';
 import markdownitEmoji from 'markdown-it-emoji/light';
 import markdown_it_container from 'markdown-it-container';
-import twemoji from 'twemoji';
 import emojiShortName from 'emoji-short-name';
 import Toastify from 'toastify-js';
 import tippy from 'tippy.js';
-import EmojiButton from '@joeattardi/emoji-button';
+import moment from 'moment';
 
 export const repoUrl = 'https://github.com/makigi-io/makigi';
 export const helpGuideUrl = '/docs/about_guide.html';
@@ -113,14 +112,6 @@ export const themes = [
   'i386',
 ];
 
-export const emojiPicker = new EmojiButton({
-  // Use the emojiShortName from native
-  style: 'twemoji',
-  theme: 'dark',
-  position: 'auto-start',
-  // TODO i18n
-});
-
 const DEFAULT_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -176,10 +167,6 @@ export const md = new markdown_it({
   .use(markdownitEmoji, {
     defs: objectFlip(emojiShortName),
   });
-
-md.renderer.rules.emoji = function (token, idx) {
-  return twemoji.parse(token[idx].content);
-};
 
 export function hotRankComment(comment: Comment): number {
   return hotRank(comment.score, comment.published);
@@ -491,6 +478,18 @@ export function showAvatars(): boolean {
   );
 }
 
+export function isCakeDay(published: string): boolean {
+  // moment(undefined) or moment.utc(undefined) returns the current date/time
+  // moment(null) or moment.utc(null) returns null
+  const userCreationDate = moment.utc(published || null).local();
+  const currentDate = moment(new Date());
+
+  return (
+    userCreationDate.date() === currentDate.date() &&
+    userCreationDate.month() === currentDate.month()
+  );
+}
+
 // Converts to image thumbnail
 export function pictrsImage(hash: string, thumbnail: boolean = false): string {
   let root = `/pictrs/image`;
@@ -580,8 +579,7 @@ export function setupTribute(): Tribute {
         trigger: ':',
         menuItemTemplate: (item: any) => {
           let shortName = `:${item.original.key}:`;
-          let twemojiIcon = twemoji.parse(item.original.val);
-          return `${twemojiIcon} ${shortName}`;
+          return `${item.original.val} ${shortName}`;
         },
         selectTemplate: (item: any) => {
           return `:${item.original.key}:`;

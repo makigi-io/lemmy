@@ -381,7 +381,6 @@ export class Main extends Component<any, MainState> {
               <a href="https://actix.rs/">#</a>
               <a href="https://infernojs.org">#</a>
               <a href="https://www.typescriptlang.org/">#</a>
-              <a href="https://beta.makigi.io">#</a>
             </T>
           </p>
         </div>
@@ -491,7 +490,7 @@ export class Main extends Component<any, MainState> {
             {i18n.t('prev')}
           </button>
         )}
-        {this.state.posts.length == fetchLimit && (
+        {this.state.posts.length > 0 && (
           <button
             class="btn btn-sm btn-secondary"
             onClick={linkEvent(this, this.nextPage)}
