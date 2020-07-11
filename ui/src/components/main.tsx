@@ -368,7 +368,7 @@ export class Main extends Component<any, MainState> {
           </p>
           <p class="mb-0 small">
             <T i18nKey="landing_2">
-              #<a href="https://github.com/makigi-io/makigi">#</a>
+              <a href="https://github.com/makigi-io/makigi">#</a>
               <a href="https://en.wikipedia.org/wiki/Fediverse">#</a>
               <br></br>
               <code>#</code>
