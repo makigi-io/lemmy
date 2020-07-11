@@ -1,21 +1,22 @@
 use crate::{
   apub::{
     activities::{populate_object_props, send_activity_to_community},
-    create_apub_response, create_apub_tombstone_response, create_tombstone,
+    create_apub_response,
+    create_apub_tombstone_response,
+    create_tombstone,
     extensions::page_extension::PageExtension,
     fetcher::{get_or_fetch_and_upsert_remote_community, get_or_fetch_and_upsert_remote_user},
-    get_apub_protocol_string, ActorType, ApubLikeableType, ApubObjectType, FromApub, PageExt,
+    ActorType,
+    ApubLikeableType,
+    ApubObjectType,
+    FromApub,
+    PageExt,
     ToApub,
   },
-  blocking, convert_datetime,
-  db::{
-    community::Community,
-    post::{Post, PostForm},
-    user::User_,
-    Crud,
-  },
+  blocking,
   routes::DbPoolParam,
-  DbPool, LemmyError, Settings,
+  DbPool,
+  LemmyError,
 };
 use activitystreams::{
   activity::{Create, Delete, Dislike, Like, Remove, Undo, Update},
@@ -26,6 +27,13 @@ use activitystreams::{
 use activitystreams_ext::Ext1;
 use activitystreams_new::object::Tombstone;
 use actix_web::{body::Body, client::Client, web, HttpResponse};
+use lemmy_db::{
+  community::Community,
+  post::{Post, PostForm},
+  user::User_,
+  Crud,
+};
+use lemmy_utils::{convert_datetime, get_apub_protocol_string, settings::Settings};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

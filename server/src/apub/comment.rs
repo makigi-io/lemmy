@@ -1,23 +1,25 @@
 use crate::{
   apub::{
     activities::{populate_object_props, send_activity_to_community},
-    create_apub_response, create_apub_tombstone_response, create_tombstone, fetch_webfinger_url,
+    create_apub_response,
+    create_apub_tombstone_response,
+    create_tombstone,
+    fetch_webfinger_url,
     fetcher::{
-      get_or_fetch_and_insert_remote_comment, get_or_fetch_and_insert_remote_post,
+      get_or_fetch_and_insert_remote_comment,
+      get_or_fetch_and_insert_remote_post,
       get_or_fetch_and_upsert_remote_user,
     },
-    ActorType, ApubLikeableType, ApubObjectType, FromApub, ToApub,
+    ActorType,
+    ApubLikeableType,
+    ApubObjectType,
+    FromApub,
+    ToApub,
   },
-  blocking, convert_datetime,
-  db::{
-    comment::{Comment, CommentForm},
-    community::Community,
-    post::Post,
-    user::User_,
-    Crud,
-  },
+  blocking,
   routes::DbPoolParam,
-  scrape_text_for_mentions, DbPool, LemmyError, MentionData,
+  DbPool,
+  LemmyError,
 };
 use activitystreams::{
   activity::{Create, Delete, Dislike, Like, Remove, Undo, Update},
@@ -28,6 +30,14 @@ use activitystreams::{
 use activitystreams_new::object::Tombstone;
 use actix_web::{body::Body, client::Client, web::Path, HttpResponse};
 use itertools::Itertools;
+use lemmy_db::{
+  comment::{Comment, CommentForm},
+  community::Community,
+  post::Post,
+  user::User_,
+  Crud,
+};
+use lemmy_utils::{convert_datetime, scrape_text_for_mentions, MentionData};
 use log::debug;
 use serde::Deserialize;
 
