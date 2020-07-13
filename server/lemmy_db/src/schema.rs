@@ -47,6 +47,7 @@ table! {
         deleted -> Nullable<Bool>,
         ap_id -> Nullable<Varchar>,
         local -> Nullable<Bool>,
+        post_name -> Nullable<Varchar>,
         community_id -> Nullable<Int4>,
         community_actor_id -> Nullable<Varchar>,
         community_local -> Nullable<Bool>,
