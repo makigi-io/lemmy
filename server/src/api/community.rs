@@ -98,7 +98,6 @@ pub struct AddModToCommunityResponse {
 #[derive(Serialize, Deserialize)]
 pub struct EditCommunity {
   pub edit_id: i32,
-  name: String,
   title: String,
   description: Option<String>,
   category_id: i32,
@@ -264,6 +263,17 @@ impl Perform for Oper<CreateCommunity> {
       return Err(APIError::err("site_ban").into());
     }
 
+    // Double check for duplicate community actor_ids
+    let actor_id = make_apub_endpoint(EndpointType::Community, &data.name).to_string();
+    let actor_id_cloned = actor_id.to_owned();
+    let community_dupe = blocking(pool, move |conn| {
+      Community::read_from_actor_id(conn, &actor_id_cloned)
+    })
+    .await?;
+    if community_dupe.is_ok() {
+      return Err(APIError::err("community_already_exists").into());
+    }
+
     // When you create a community, make sure the user becomes a moderator and a follower
     let keypair = generate_actor_keypair()?;
 
@@ -277,7 +287,7 @@ impl Perform for Oper<CreateCommunity> {
       deleted: None,
       nsfw: data.nsfw,
       updated: None,
-      actor_id: make_apub_endpoint(EndpointType::Community, &data.name).to_string(),
+      actor_id,
       local: true,
       private_key: Some(keypair.private_key),
       public_key: Some(keypair.public_key),
@@ -333,10 +343,6 @@ impl Perform for Oper<EditCommunity> {
   ) -> Result<CommunityResponse, LemmyError> {
     let data: &EditCommunity = &self.data;
 
-    if let Err(slurs) = slur_check(&data.name) {
-      return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
-    }
-
     if let Err(slurs) = slur_check(&data.title) {
       return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
     }
@@ -351,10 +357,6 @@ impl Perform for Oper<EditCommunity> {
       Ok(claims) => claims.claims,
       Err(_e) => return Err(APIError::err("not_logged_in").into()),
     };
-
-    if !is_valid_community_name(&data.name) {
-      return Err(APIError::err("invalid_community_name").into());
-    }
 
     let user_id = claims.id;
 
@@ -388,7 +390,7 @@ impl Perform for Oper<EditCommunity> {
     let read_community = blocking(pool, move |conn| Community::read(conn, edit_id)).await??;
 
     let community_form = CommunityForm {
-      name: data.name.to_owned(),
+      name: read_community.name,
       title: data.title.to_owned(),
       description: data.description.to_owned(),
       category_id: data.category_id.to_owned(),
