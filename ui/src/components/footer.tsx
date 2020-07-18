@@ -20,12 +20,15 @@ export class Footer extends Component<any, any> {
             </li>
             */}
             <li class="nav-item">
-              <a class="nav-link" href="https://makigi.io/terms.html">
+              <a class="nav-link" href="https://network.makigi.io/terms.html">
                 Regulamin
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="https://makigi.io/privacy-policy.html">
+              <a
+                class="nav-link"
+                href="https://network.makigi.io/privacy-policy.html"
+              >
                 Polityka prywatności
               </a>
             </li>
