@@ -242,6 +242,7 @@
     "couldnt_find_that_username_or_email": "Nie udało się znaleźć takiej nazwy użytkownika lub adresu email.",
     "password_incorrect": "Hasło niepoprawne.",
     "passwords_dont_match": "Hasła nie pasują do siebie.",
+    "no_password_reset": "Nie będziesz mógł zresetować hasła bez podania adresu emial.",
     "admin_already_created": "Wybacz, funkcja administratora jest już przypisana.",
     "user_already_exists": "Użytkownik już istnieje.",
     "email_already_exists": "Email już istnieje.",
