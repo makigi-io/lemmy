@@ -225,6 +225,9 @@
     "powered_by": "Powered by",
     "landing_0":
       "Lemmy is a <1>link aggregator</1> / reddit alternative, intended to work in the <2>fediverse</2>.<3></3>It's self-hostable, has live-updating comment threads, and is tiny (<4>~80kB</4>). Federation into the ActivityPub network is on the roadmap. <5></5>This is a <6>very early beta version</6>, and a lot of features are currently broken or missing. <7></7>Suggest new features or report bugs <8>here.</8><9></9>Made with <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>. <14></14> <15>Thank you to our contributors: </15> dessalines, Nutomic, asonix, zacanger, and iav.",
+    "landing_1": "<1>board.makigi.io</1> jest anonimowym, opartym na tagach forum obrazkowym. Posiada aktualizowane na żywo wątki z komentarzami. Bez rejestracji i profilu.",
+    "landing_2": "<14>mastodon.makigi.io</14> jest zdecentralizowaną platformą mikroblogową podobną do tych, które możesz już znać, takich jak Twitter.",
+    "landing_3": "<14>makigi.io</14> jest agregatorem linków / alternatywą dla reddita. Jest to fork <1>Lemmy'ego</1>, przeznaczony do działania w ramach cyfrowej przestrzeni nazywanej <2>fediverse</2>. <3></3>Opiera się na samodzielnym hostingu, posiada aktualizowane na żywo wątki z komentarzami, i zajmuje bardzo mało miejsce (<4>~80kB</4>). Federacja w ramach sieci ActivityPub jest w planach. <5></5>Ta wersja jest <6>bardzo wczesną wersją beta</6>, co oznacza, że wiele funkcji nadal nie działa tak jak powinny. <7></7><8>Pod tym adresem</8> można sugerować nową funkcjonalność i zgłaszać błędy.<9></9>Stworzono z wykorzystaniem <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>.",
     "not_logged_in": "Not logged in.",
     "logged_in": "Logged in.",
     "must_login": "You must <1>log in or register</1> to comment.",
