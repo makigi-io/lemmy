@@ -1,37 +1,19 @@
 use crate::{
   api::{claims::Claims, is_mod_or_admin, APIError, Oper, Perform},
   apub::{ApubLikeableType, ApubObjectType},
-  blocking,
-  fetch_iframely_and_pictrs_data,
+  blocking, fetch_iframely_and_pictrs_data,
   websocket::{
     server::{JoinCommunityRoom, JoinPostRoom, SendPost},
-    UserOperation,
-    WebsocketInfo,
+    UserOperation, WebsocketInfo,
   },
-  DbPool,
-  LemmyError,
+  DbPool, LemmyError,
 };
 use lemmy_db::{
-  comment_view::*,
-  community_view::*,
-  moderator::*,
-  naive_now,
-  post::*,
-  post_view::*,
-  site_view::*,
-  user::*,
-  Crud,
-  Likeable,
-  ListingType,
-  Saveable,
-  SortType,
+  comment_view::*, community_view::*, moderator::*, naive_now, post::*, post_view::*, site_view::*,
+  user::*, Crud, Likeable, ListingType, Saveable, SortType,
 };
 use lemmy_utils::{
-  is_valid_post_title,
-  make_apub_endpoint,
-  slur_check,
-  slurs_vec_to_str,
-  EndpointType,
+  is_valid_post_title, make_apub_endpoint, slur_check, slurs_vec_to_str, EndpointType,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -370,21 +352,26 @@ impl Perform for Oper<GetPosts> {
   ) -> Result<GetPostsResponse, LemmyError> {
     let data: &GetPosts = &self.data;
 
-    let user_claims: Option<Claims> = match &data.auth {
+    // For logged in users, you need to get back subscribed, and settings
+    let user: Option<User_> = match &data.auth {
       Some(auth) => match Claims::decode(&auth) {
-        Ok(claims) => Some(claims.claims),
+        Ok(claims) => {
+          let user_id = claims.claims.id;
+          let user = blocking(pool, move |conn| User_::read(conn, user_id)).await??;
+          Some(user)
+        }
         Err(_e) => None,
       },
       None => None,
     };
 
-    let user_id = match &user_claims {
-      Some(claims) => Some(claims.id),
+    let user_id = match &user {
+      Some(user) => Some(user.id),
       None => None,
     };
 
-    let show_nsfw = match &user_claims {
-      Some(claims) => claims.show_nsfw,
+    let show_nsfw = match &user {
+      Some(user) => user.show_nsfw,
       None => false,
     };
 

@@ -5,20 +5,14 @@ use crate::{
   blocking,
   websocket::{
     server::{JoinCommunityRoom, SendCommunityRoomMessage},
-    UserOperation,
-    WebsocketInfo,
+    UserOperation, WebsocketInfo,
   },
   DbPool,
 };
 use lemmy_db::{naive_now, Bannable, Crud, Followable, Joinable, SortType};
 use lemmy_utils::{
-  generate_actor_keypair,
-  is_valid_community_name,
-  make_apub_endpoint,
-  naive_from_unix,
-  slur_check,
-  slurs_vec_to_str,
-  EndpointType,
+  generate_actor_keypair, is_valid_community_name, make_apub_endpoint, naive_from_unix, slur_check,
+  slurs_vec_to_str, EndpointType,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -591,21 +585,26 @@ impl Perform for Oper<ListCommunities> {
   ) -> Result<ListCommunitiesResponse, LemmyError> {
     let data: &ListCommunities = &self.data;
 
-    let user_claims: Option<Claims> = match &data.auth {
+    // For logged in users, you need to get back subscribed, and settings
+    let user: Option<User_> = match &data.auth {
       Some(auth) => match Claims::decode(&auth) {
-        Ok(claims) => Some(claims.claims),
+        Ok(claims) => {
+          let user_id = claims.claims.id;
+          let user = blocking(pool, move |conn| User_::read(conn, user_id)).await??;
+          Some(user)
+        }
         Err(_e) => None,
       },
       None => None,
     };
 
-    let user_id = match &user_claims {
-      Some(claims) => Some(claims.id),
+    let user_id = match &user {
+      Some(user) => Some(user.id),
       None => None,
     };
 
-    let show_nsfw = match &user_claims {
-      Some(claims) => claims.show_nsfw,
+    let show_nsfw = match &user {
+      Some(user) => user.show_nsfw,
       None => false,
     };
 

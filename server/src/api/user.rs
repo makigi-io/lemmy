@@ -4,48 +4,20 @@ use crate::{
   blocking,
   websocket::{
     server::{JoinUserRoom, SendAllMessage, SendUserRoomMessage},
-    UserOperation,
-    WebsocketInfo,
+    UserOperation, WebsocketInfo,
   },
-  DbPool,
-  LemmyError,
+  DbPool, LemmyError,
 };
 use bcrypt::verify;
 use lemmy_db::{
-  comment::*,
-  comment_view::*,
-  community::*,
-  community_view::*,
-  moderator::*,
-  naive_now,
-  password_reset_request::*,
-  post::*,
-  post_view::*,
-  private_message::*,
-  private_message_view::*,
-  site::*,
-  site_view::*,
-  user::*,
-  user_mention::*,
-  user_mention_view::*,
-  user_view::*,
-  Crud,
-  Followable,
-  Joinable,
-  ListingType,
-  SortType,
+  comment::*, comment_view::*, community::*, community_view::*, moderator::*, naive_now,
+  password_reset_request::*, post::*, post_view::*, private_message::*, private_message_view::*,
+  site::*, site_view::*, user::*, user_mention::*, user_mention_view::*, user_view::*, Crud,
+  Followable, Joinable, ListingType, SortType,
 };
 use lemmy_utils::{
-  generate_actor_keypair,
-  generate_random_string,
-  is_valid_username,
-  make_apub_endpoint,
-  naive_from_unix,
-  remove_slurs,
-  send_email,
-  settings::Settings,
-  slur_check,
-  slurs_vec_to_str,
+  generate_actor_keypair, generate_random_string, is_valid_username, make_apub_endpoint,
+  naive_from_unix, remove_slurs, send_email, settings::Settings, slur_check, slurs_vec_to_str,
   EndpointType,
 };
 use log::error;
@@ -561,21 +533,26 @@ impl Perform for Oper<GetUserDetails> {
   ) -> Result<GetUserDetailsResponse, LemmyError> {
     let data: &GetUserDetails = &self.data;
 
-    let user_claims: Option<Claims> = match &data.auth {
+    // For logged in users, you need to get back subscribed, and settings
+    let user: Option<User_> = match &data.auth {
       Some(auth) => match Claims::decode(&auth) {
-        Ok(claims) => Some(claims.claims),
+        Ok(claims) => {
+          let user_id = claims.claims.id;
+          let user = blocking(pool, move |conn| User_::read(conn, user_id)).await??;
+          Some(user)
+        }
         Err(_e) => None,
       },
       None => None,
     };
 
-    let user_id = match &user_claims {
-      Some(claims) => Some(claims.id),
+    let user_id = match &user {
+      Some(user) => Some(user.id),
       None => None,
     };
 
-    let show_nsfw = match &user_claims {
-      Some(claims) => claims.show_nsfw,
+    let show_nsfw = match &user {
+      Some(user) => user.show_nsfw,
       None => false,
     };
 
@@ -1188,11 +1165,11 @@ impl Perform for Oper<CreatePrivateMessage> {
         let subject = &format!(
           "{} - Private Message from {}",
           Settings::get().hostname,
-          claims.username
+          user.name,
         );
         let html = &format!(
           "<h1>Private Message</h1><br><div>{} - {}</div><br><a href={}/inbox>inbox</a>",
-          claims.username, &content_slurs_removed, hostname
+          user.name, &content_slurs_removed, hostname
         );
         match send_email(subject, &email, &recipient_user.name, html) {
           Ok(_o) => _o,

@@ -2,26 +2,13 @@ use super::user::Register;
 use crate::{
   api::{claims::Claims, is_admin, APIError, Oper, Perform},
   apub::fetcher::search_by_apub_id,
-  blocking,
-  version,
+  blocking, version,
   websocket::{server::SendAllMessage, UserOperation, WebsocketInfo},
-  DbPool,
-  LemmyError,
+  DbPool, LemmyError,
 };
 use lemmy_db::{
-  category::*,
-  comment_view::*,
-  community_view::*,
-  moderator::*,
-  moderator_views::*,
-  naive_now,
-  post_view::*,
-  site::*,
-  site_view::*,
-  user_view::*,
-  Crud,
-  SearchType,
-  SortType,
+  category::*, comment_view::*, community_view::*, moderator::*, moderator_views::*, naive_now,
+  post_view::*, site::*, site_view::*, user::*, user_view::*, Crud, SearchType, SortType,
 };
 use lemmy_utils::{settings::Settings, slur_check, slurs_vec_to_str};
 use log::{debug, info};
@@ -98,7 +85,9 @@ pub struct EditSite {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GetSite {}
+pub struct GetSite {
+  auth: Option<String>,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SiteResponse {
@@ -112,6 +101,7 @@ pub struct GetSiteResponse {
   banned: Vec<UserView>,
   pub online: usize,
   version: String,
+  my_user: Option<User_>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -352,7 +342,7 @@ impl Perform for Oper<GetSite> {
     pool: &DbPool,
     websocket_info: Option<WebsocketInfo>,
   ) -> Result<GetSiteResponse, LemmyError> {
-    let _data: &GetSite = &self.data;
+    let data: &GetSite = &self.data;
 
     // TODO refactor this a little
     let res = blocking(pool, move |conn| Site::read(conn, 1)).await?;
@@ -415,12 +405,29 @@ impl Perform for Oper<GetSite> {
       0
     };
 
+    // Giving back your user, if you're logged in
+    let my_user: Option<User_> = match &data.auth {
+      Some(auth) => match Claims::decode(&auth) {
+        Ok(claims) => {
+          let user_id = claims.claims.id;
+          let mut user = blocking(pool, move |conn| User_::read(conn, user_id)).await??;
+          user.password_encrypted = "".to_string();
+          user.private_key = None;
+          user.public_key = None;
+          Some(user)
+        }
+        Err(_e) => None,
+      },
+      None => None,
+    };
+
     Ok(GetSiteResponse {
       site: site_view,
       admins,
       banned,
       online,
       version: version::VERSION.to_string(),
+      my_user,
     })
   }
 }
@@ -614,6 +621,11 @@ impl Perform for Oper<TransferSite> {
     };
 
     let user_id = claims.id;
+    let mut user = blocking(pool, move |conn| User_::read(conn, user_id)).await??;
+    // TODO add a User_::read_safe() for this.
+    user.password_encrypted = "".to_string();
+    user.private_key = None;
+    user.public_key = None;
 
     let read_site = blocking(pool, move |conn| Site::read(conn, 1)).await??;
 
@@ -664,6 +676,7 @@ impl Perform for Oper<TransferSite> {
       banned,
       online: 0,
       version: version::VERSION.to_string(),
+      my_user: Some(user),
     })
   }
 }
