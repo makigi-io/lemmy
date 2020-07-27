@@ -116,7 +116,7 @@ export class Inbox extends Component<any, InboxState> {
         this.state.site.name
       }`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

@@ -91,7 +91,7 @@ export class Login extends Component<any, State> {
     if (this.state.site.name) {
       return `${i18n.t('login')} - ${this.state.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

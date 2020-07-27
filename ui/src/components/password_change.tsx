@@ -56,7 +56,7 @@ export class PasswordChange extends Component<any, State> {
     if (this.state.site) {
       return `${i18n.t('password_change')} - ${this.state.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

@@ -182,7 +182,7 @@ export class Main extends Component<any, MainState> {
     if (this.state.siteRes.site.name) {
       return `${this.state.siteRes.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

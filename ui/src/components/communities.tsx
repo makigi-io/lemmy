@@ -79,7 +79,7 @@ export class Communities extends Component<any, CommunitiesState> {
     if (this.state.site) {
       return `${i18n.t('communities')} - ${this.state.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

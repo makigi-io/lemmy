@@ -215,7 +215,7 @@ export class User extends Component<any, UserState> {
     if (this.state.siteRes.site.name) {
       return `/u/${this.state.username} - ${this.state.siteRes.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 

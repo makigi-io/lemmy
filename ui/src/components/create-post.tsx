@@ -66,7 +66,7 @@ export class CreatePost extends Component<any, CreatePostState> {
     if (this.state.site.name) {
       return `${i18n.t('create_post')} - ${this.state.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 
@@ -110,7 +110,7 @@ export class CreatePost extends Component<any, CreatePostState> {
         return lastLocation.split('/c/')[1];
       }
     }
-    return undefined;
+    return;
   }
 
   handlePostCreate(id: number) {

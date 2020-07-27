@@ -57,7 +57,7 @@ export class CreatePrivateMessage extends Component<
     if (this.state.site) {
       return `${i18n.t('create_private_message')} - ${this.state.site.name}`;
     } else {
-      return 'Lemmy';
+      return 'Makigi';
     }
   }
 
