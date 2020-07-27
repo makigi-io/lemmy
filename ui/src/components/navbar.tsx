@@ -233,6 +233,7 @@ export class Navbar extends Component<any, NavbarState> {
                     {i18n.t('create_community')}
                   </Link>
                 </li>
+                {/*
                 <li className="nav-item">
                   <Link
                     class="nav-link"
@@ -244,6 +245,7 @@ export class Navbar extends Component<any, NavbarState> {
                     </svg>
                   </Link>
                 </li>
+                */}
               </ul>
               {!this.context.router.history.location.pathname.match(
                 /^\/search/
