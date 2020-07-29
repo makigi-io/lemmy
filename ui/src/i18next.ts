@@ -71,7 +71,7 @@ i18next.init({
 
   // initImmediate: false,
   lng: getLanguage(),
-  fallbackLng: 'en',
+  fallbackLng: 'pl',
   resources,
   interpolation: { format },
 });
