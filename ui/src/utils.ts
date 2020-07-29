@@ -355,7 +355,7 @@ export function getLanguage(): string {
   let lang = user && user.lang ? user.lang : 'browser';
 
   if (lang == 'browser') {
-    return getBrowserLanguage();
+    return 'pl';
   } else {
     return lang;
   }
