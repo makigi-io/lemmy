@@ -1,14 +1,22 @@
 use crate::{
   apub::{
     activities::send_activity_to_community,
-    create_apub_response, create_apub_tombstone_response, create_tombstone,
+    create_apub_response,
+    create_apub_tombstone_response,
+    create_tombstone,
     extensions::page_extension::PageExtension,
     fetcher::{get_or_fetch_and_upsert_remote_community, get_or_fetch_and_upsert_remote_user},
-    ActorType, ApubLikeableType, ApubObjectType, FromApub, PageExt, ToApub,
+    ActorType,
+    ApubLikeableType,
+    ApubObjectType,
+    FromApub,
+    PageExt,
+    ToApub,
   },
   blocking,
   routes::DbPoolParam,
-  DbPool, LemmyError,
+  DbPool,
+  LemmyError,
 };
 use activitystreams_ext::Ext1;
 use activitystreams_new::{
@@ -25,7 +33,7 @@ use lemmy_db::{
   user::User_,
   Crud,
 };
-use lemmy_utils::{convert_datetime, get_apub_protocol_string, settings::Settings};
+use lemmy_utils::convert_datetime;
 use serde::Deserialize;
 use url::Url;
 
@@ -106,15 +114,8 @@ impl ToApub for Post {
     }
 
     if let Some(thumbnail_url) = &self.thumbnail_url {
-      let full_url = format!(
-        "{}://{}/pictshare/{}",
-        get_apub_protocol_string(),
-        Settings::get().hostname,
-        thumbnail_url
-      );
-
       let mut image = Image::new();
-      image.set_url(full_url);
+      image.set_url(thumbnail_url.to_string());
       page.set_image(image.into_any_base()?);
     }
 
