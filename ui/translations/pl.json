@@ -247,6 +247,8 @@
     "password_incorrect": "Hasło niepoprawne.",
     "passwords_dont_match": "Hasła nie pasują do siebie.",
     "no_password_reset": "Nie będziesz mógł zresetować hasła bez podania adresu email.",
+    "captcha_incorrect": "Captcha niepoprawna.",
+    "enter_code": "Wpisz kod",
     "admin_already_created": "Wybacz, funkcja administratora jest już przypisana.",
     "user_already_exists": "Użytkownik już istnieje.",
     "email_already_exists": "Email już istnieje.",
