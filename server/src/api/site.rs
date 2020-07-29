@@ -2,13 +2,27 @@ use super::user::Register;
 use crate::{
   api::{claims::Claims, is_admin, APIError, Oper, Perform},
   apub::fetcher::search_by_apub_id,
-  blocking, version,
+  blocking,
+  version,
   websocket::{server::SendAllMessage, UserOperation, WebsocketInfo},
-  DbPool, LemmyError,
+  DbPool,
+  LemmyError,
 };
 use lemmy_db::{
-  category::*, comment_view::*, community_view::*, moderator::*, moderator_views::*, naive_now,
-  post_view::*, site::*, site_view::*, user::*, user_view::*, Crud, SearchType, SortType,
+  category::*,
+  comment_view::*,
+  community_view::*,
+  moderator::*,
+  moderator_views::*,
+  naive_now,
+  post_view::*,
+  site::*,
+  site_view::*,
+  user::*,
+  user_view::*,
+  Crud,
+  SearchType,
+  SortType,
 };
 use lemmy_utils::{settings::Settings, slur_check, slurs_vec_to_str};
 use log::{debug, info};
@@ -356,6 +370,8 @@ impl Perform for Oper<GetSite> {
         password_verify: setup.admin_password.to_owned(),
         admin: true,
         show_nsfw: true,
+        captcha_uuid: None,
+        captcha_answer: None,
       };
       let login_response = Oper::new(register, self.client.clone())
         .perform(pool, websocket_info.clone())
