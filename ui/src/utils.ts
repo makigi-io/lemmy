@@ -355,7 +355,10 @@ export function getLanguage(override?: string): string {
   let lang = override || (user && user.lang ? user.lang : 'browser');
 
   if (lang == 'browser') {
-    return 'pl';
+    if (!user) {
+      return 'pl';
+    }
+    return getBrowserLanguage();
   } else {
     return lang;
   }
