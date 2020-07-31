@@ -273,5 +273,7 @@
     "what_is": "Ile wynosi",
     "cake_day_title": "Cake day:",
     "cake_day_info": "It's {{ creator_name }}'s cake day today!",
-    "must_login": "Musisz być <1>zalogowany</1> żeby dodać komentarz."
+    "must_login": "Musisz być <1>zalogowany</1> żeby dodać komentarz.",
+    "play_captcha_audio": "Odsłuchaj Captcha Audio",
+    "bio": "Bio"
 }
