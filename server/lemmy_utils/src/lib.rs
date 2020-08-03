@@ -55,11 +55,13 @@ pub fn slur_check(test: &str) -> Result<(), Vec<&str>> {
   matches.sort_unstable();
   matches.dedup();
 
-  if matches.is_empty() {
-    Ok(())
-  } else {
-    Err(matches)
-  }
+  Ok(())
+
+  // if matches.is_empty() {
+  //   Ok(())
+  // } else {
+  //   Err(matches)
+  // }
 }
 
 pub fn slurs_vec_to_str(slurs: Vec<&str>) -> String {
