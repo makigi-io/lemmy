@@ -45,7 +45,8 @@ pub fn convert_datetime(datetime: NaiveDateTime) -> DateTime<FixedOffset> {
 }
 
 pub fn remove_slurs(test: &str) -> String {
-  SLUR_REGEX.replace_all(test, "*removed*").to_string()
+  test.to_string()
+  // SLUR_REGEX.replace_all(test, "*removed*").to_string()
 }
 
 pub fn slur_check(test: &str) -> Result<(), Vec<&str>> {
