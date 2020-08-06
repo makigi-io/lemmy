@@ -155,7 +155,7 @@
     "no_email_setup": "Email nie został poprawnie ustawiony na tym serwerze.",
     "email": "Email",
     "matrix_user_id": "Użytkownik Matrixa",
-    "private_message_disclaimer": "Ostrzeżenie: Prywatne wiadomości w Lemmym nie są bezpieczne. Jeśli chcesz wysyłać i odbierać bezpieczne wiadomości załóż konto na <1>Riot.im</1>.",
+    "private_message_disclaimer": "Ostrzeżenie: Prywatne wiadomości w Makigi nie są bezpieczne. Jeśli chcesz wysyłać i odbierać bezpieczne wiadomości załóż konto na <1>Riot.im</1>.",
     "send_notifications_to_email": "Wysyłaj powiadomienia na Email",
     "optional": "Opcjonalne",
     "expires": "Wygasa",
