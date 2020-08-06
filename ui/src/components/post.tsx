@@ -186,7 +186,7 @@ export class Post extends Component<any, PostState> {
     if (this.state.post) {
       return `${this.state.post.name} - ${this.state.siteRes.site.name}`;
     } else {
-      return 'Makigi';
+      return 'Karabin.org';
     }
   }
 

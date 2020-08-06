@@ -187,7 +187,7 @@ export class Main extends Component<any, MainState> {
     if (this.state.siteRes.site.name) {
       return `${this.state.siteRes.site.name}`;
     } else {
-      return 'Makigi';
+      return 'Karabin.org';
     }
   }
 
@@ -451,19 +451,21 @@ export class Main extends Component<any, MainState> {
     return (
       <div class="">
         <h5 class="text-center mb-4">
-          <span class="font-weight-bold">Makigi</span>
-          <sup class="ml-1">network</sup>
+          <span class="font-weight-bold">Karabin</span>
+          <sup class="ml-1">org</sup>
         </h5>
         <p class="mb-4 small">
           <T i18nKey="landing_1">
-            <a href="https://board.makigi.io">board.makigi.io</a>
+            <a href="https://board.karabin.org">board.karabin.org</a>
           </T>
         </p>
+        {/*
         <p class="mb-4 small">
           <T i18nKey="landing_2">
-            <a href="https://mastodon.makigi.io">mastodon.makigi.io</a>
+            <a href="https://mastodon.karabin.org">mastodon.karabin.org</a>
           </T>
         </p>
+        */}
         <p class="mb-0 small">
           <T i18nKey="landing_3">
             #<a href="https://github.com/makigi-io/makigi">#</a>
@@ -479,7 +481,7 @@ export class Main extends Component<any, MainState> {
             <a href="https://actix.rs/">#</a>
             <a href="https://infernojs.org">#</a>
             <a href="https://www.typescriptlang.org/">#</a>
-            <a href="https://beta.makigi.io">#</a>
+            <a href="https://karabin.org">#</a>
           </T>
         </p>
       </div>

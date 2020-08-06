@@ -85,7 +85,7 @@ export class AdminSettings extends Component<any, AdminSettingsState> {
     if (this.state.siteRes.site.name) {
       return `${i18n.t('admin_settings')} - ${this.state.siteRes.site.name}`;
     } else {
-      return 'Makigi';
+      return 'Karabin.org';
     }
   }
 

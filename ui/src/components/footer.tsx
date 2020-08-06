@@ -49,14 +49,14 @@ export class Footer extends Component<any, FooterState> {
             </li>
             */}
             <li class="nav-item">
-              <a class="nav-link" href="https://network.makigi.io/terms.html">
+              <a class="nav-link" href="https://network.karabin.org/terms.html">
                 Regulamin
               </a>
             </li>
             <li class="nav-item">
               <a
                 class="nav-link"
-                href="https://network.makigi.io/privacy-policy.html"
+                href="https://network.karabin.org/privacy-policy.html"
               >
                 Polityka prywatności
               </a>

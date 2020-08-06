@@ -185,7 +185,7 @@ export class Community extends Component<any, State> {
     if (this.state.community.title) {
       return `${this.state.community.title} - ${this.state.site.name}`;
     } else {
-      return 'Makigi';
+      return 'Karabin.org';
     }
   }
 

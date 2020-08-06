@@ -233,7 +233,7 @@ export class User extends Component<any, UserState> {
     if (this.state.siteRes.site.name) {
       return `@${this.state.username} - ${this.state.siteRes.site.name}`;
     } else {
-      return 'Makigi';
+      return 'Karabin.org';
     }
   }
 
