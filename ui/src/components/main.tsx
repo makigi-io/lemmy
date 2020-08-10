@@ -456,7 +456,8 @@ export class Main extends Component<any, MainState> {
         </h5>
         <p class="mb-4 small">
           <T i18nKey="landing_1">
-            <a href="https://board.karabin.org">board.karabin.org</a>
+            <strong>#</strong>
+            <a href="https://board.karabin.org">#</a>
           </T>
         </p>
         {/*
