@@ -68,6 +68,11 @@ export class Footer extends Component<any, FooterState> {
             </li>
             {/*
             <li class="nav-item">
+              <Link class="nav-link" to="/instances">
+                {i18n.t('instances')}
+              </Link>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href={'/docs/index.html'}>
                 {i18n.t('docs')}
               </a>
