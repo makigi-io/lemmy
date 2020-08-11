@@ -279,5 +279,8 @@
     "cake_day_info": "It's {{ creator_name }}'s cake day today!",
     "must_login": "Musisz być <1>zalogowany</1> żeby dodać komentarz.",
     "play_captcha_audio": "Odsłuchaj Captcha Audio",
-    "bio": "Bio"
+    "bio": "Bio",
+    "instances": "Instancje",
+    "linked_instances": "Powiązane instancje",
+    "none_found": "Nie znaleziono."
 }
