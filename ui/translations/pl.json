@@ -266,5 +266,8 @@
     "invalid_username": "Nieprawidłowa nazwa użytkownika.",
     "invalid_community_name": "Niepoprawna nazwa.",
     "play_captcha_audio": "Odsłuchaj Captcha Audio",
-    "bio": "Bio"
+    "bio": "Bio",
+    "instances": "Instancje",
+    "linked_instances": "Powiązane instancje",
+    "none_found": "Nie znaleziono."
 }
