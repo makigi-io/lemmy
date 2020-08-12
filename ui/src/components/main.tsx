@@ -453,7 +453,7 @@ export class Main extends Component<any, MainState> {
       <div class="">
         <h5 class="text-center mb-4">
           <span class="font-weight-bold">Karabin</span>
-          <sup class="ml-1">org</sup>
+          <sup class="ml-1">io</sup>
         </h5>
         <p class="mb-4 small">
           <T i18nKey="landing_1">
