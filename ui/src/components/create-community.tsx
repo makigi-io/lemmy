@@ -65,7 +65,7 @@ export class CreateCommunity extends Component<any, CreateCommunityState> {
     if (this.state.site.name) {
       return `${i18n.t('create_community')} - ${this.state.site.name}`;
     } else {
-      return 'Karabin.io';
+      return 'Karab.in';
     }
   }
 

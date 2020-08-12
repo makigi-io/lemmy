@@ -49,14 +49,14 @@ export class Footer extends Component<any, FooterState> {
             </li>
             */}
             <li class="nav-item">
-              <a class="nav-link" href="https://network.karabin.io/terms.html">
+              <a class="nav-link" href="https://network.karab.in/terms.html">
                 Regulamin
               </a>
             </li>
             <li class="nav-item">
               <a
                 class="nav-link"
-                href="https://network.karabin.io/privacy-policy.html"
+                href="https://network.karab.in/privacy-policy.html"
               >
                 Polityka prywatności
               </a>

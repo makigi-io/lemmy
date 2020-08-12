@@ -188,7 +188,7 @@ export class Main extends Component<any, MainState> {
     if (this.state.siteRes.site.name) {
       return `${this.state.siteRes.site.name}`;
     } else {
-      return 'Karabin.io';
+      return 'Karab.in';
     }
   }
 
@@ -458,13 +458,13 @@ export class Main extends Component<any, MainState> {
         <p class="mb-4 small">
           <T i18nKey="landing_1">
             <strong>#</strong>
-            <a href="https://board.karabin.io">#</a>
+            <a href="https://board.karab.in">#</a>
           </T>
         </p>
         {/*
         <p class="mb-4 small">
           <T i18nKey="landing_2">
-            <a href="https://mastodon.karabin.io">mastodon.karabin.io</a>
+            <a href="https://mastodon.karab.in">mastodon.karab.in</a>
           </T>
         </p>
         */}
@@ -483,7 +483,7 @@ export class Main extends Component<any, MainState> {
             <a href="https://actix.rs/">#</a>
             <a href="https://infernojs.org">#</a>
             <a href="https://www.typescriptlang.org/">#</a>
-            <a href="https://karabin.io">#</a>
+            <a href="https://karab.in">#</a>
           </T>
         </p>
       </div>

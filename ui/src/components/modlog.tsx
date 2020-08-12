@@ -346,7 +346,7 @@ export class Modlog extends Component<any, ModlogState> {
     if (this.state.site) {
       return `Modlog - ${this.state.site.name}`;
     } else {
-      return 'Karabin.io';
+      return 'Karab.in';
     }
   }
 
