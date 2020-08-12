@@ -171,7 +171,7 @@
     "email": "Email",
     "matrix_user_id": "Matrix User",
     "private_message_disclaimer":
-      "Warning: Private messages in Lemmy are not secure. Please create an account on <1>Element.io</1> for secure messaging.",
+      "Warning: Private messages in Karabin.io are not secure. Please create an account on <1>Element.io</1> for secure messaging.",
     "send_notifications_to_email": "Send notifications to Email",
     "optional": "Optional",
     "expires": "Expires",
@@ -235,7 +235,7 @@
     "powered_by": "Powered by",
     "landing_0":
       "Lemmy is a <1>link aggregator</1> / reddit alternative, intended to work in the <2>fediverse</2>.<3></3>It's self-hostable, has live-updating comment threads, and is tiny (<4>~80kB</4>). Federation into the ActivityPub network is on the roadmap. <5></5>This is a <6>very early beta version</6>, and a lot of features are currently broken or missing. <7></7>Suggest new features or report bugs <8>here.</8><9></9>Made with <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>. <14></14> <15>Thank you to our contributors: </15> dessalines, Nutomic, asonix, zacanger, and iav.",
-    "landing_1": "<1>board.karabin.org</1> jest anonimowym, opartym na tagach forum obrazkowym z <2>minimalną moderacją</2>. Posiada aktualizowane na żywo wątki z komentarzami. Bez rejestracji i profilu. Prawdopodobnie nie jest to miejsce dla ciebie.",
+    "landing_1": "<1>board.karabin.io</1> jest anonimowym, opartym na tagach forum obrazkowym z <2>minimalną moderacją</2>. Posiada aktualizowane na żywo wątki z komentarzami. Bez rejestracji i profilu. Prawdopodobnie nie jest to miejsce dla ciebie.",
     "landing_2": "<14>mastodon.makigi.io</14> jest zdecentralizowaną platformą mikroblogową podobną do tych, które możesz już znać, takich jak Twitter.",
     "landing_3": "<14>makigi.io</14> jest agregatorem linków / alternatywą dla reddita. Jest to fork <1>Lemmy'ego</1>, przeznaczony do działania w ramach cyfrowej przestrzeni nazywanej <2>fediverse</2>. <3></3>Opiera się na samodzielnym hostingu, posiada aktualizowane na żywo wątki z komentarzami, i zajmuje bardzo mało miejsce (<4>~80kB</4>). Federacja w ramach sieci ActivityPub jest w planach. <5></5>Ta wersja jest <6>bardzo wczesną wersją beta</6>, co oznacza, że wiele funkcji nadal nie działa tak jak powinny. <7></7><8>Pod tym adresem</8> można sugerować nową funkcjonalność i zgłaszać błędy.<9></9>Stworzono z wykorzystaniem <10>Rust</10>, <11>Actix</11>, <12>Inferno</12>, <13>Typescript</13>.",
     "not_logged_in": "Not logged in.",

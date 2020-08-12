@@ -66,7 +66,7 @@ export class CreatePost extends Component<any, CreatePostState> {
     if (this.state.site.name) {
       return `${i18n.t('create_post')} - ${this.state.site.name}`;
     } else {
-      return 'Karabin.org';
+      return 'Karabin.io';
     }
   }
 

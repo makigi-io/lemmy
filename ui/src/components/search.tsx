@@ -166,7 +166,7 @@ export class Search extends Component<any, SearchState> {
         return `${i18n.t('search')} - ${this.state.site.name}`;
       }
     } else {
-      return 'Karabin.org';
+      return 'Karabin.io';
     }
   }
 
