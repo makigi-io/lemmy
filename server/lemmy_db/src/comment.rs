@@ -172,36 +172,20 @@ pub struct CommentLikeForm {
 }
 
 impl Likeable<CommentLikeForm> for CommentLike {
-  fn read(conn: &PgConnection, comment_id_from: i32) -> Result<Vec<Self>, Error> {
-    use crate::schema::comment_like::dsl::*;
-    comment_like
-      .filter(comment_id.eq(comment_id_from))
-      .load::<Self>(conn)
-  }
-
   fn like(conn: &PgConnection, comment_like_form: &CommentLikeForm) -> Result<Self, Error> {
     use crate::schema::comment_like::dsl::*;
     insert_into(comment_like)
       .values(comment_like_form)
       .get_result::<Self>(conn)
   }
-  fn remove(conn: &PgConnection, comment_like_form: &CommentLikeForm) -> Result<usize, Error> {
-    use crate::schema::comment_like::dsl::*;
+  fn remove(conn: &PgConnection, user_id: i32, comment_id: i32) -> Result<usize, Error> {
+    use crate::schema::comment_like::dsl;
     diesel::delete(
-      comment_like
-        .filter(comment_id.eq(comment_like_form.comment_id))
-        .filter(user_id.eq(comment_like_form.user_id)),
+      dsl::comment_like
+        .filter(dsl::comment_id.eq(comment_id))
+        .filter(dsl::user_id.eq(user_id)),
     )
     .execute(conn)
-  }
-}
-
-impl CommentLike {
-  pub fn from_post(conn: &PgConnection, post_id_from: i32) -> Result<Vec<Self>, Error> {
-    use crate::schema::comment_like::dsl::*;
-    comment_like
-      .filter(post_id.eq(post_id_from))
-      .load::<Self>(conn)
   }
 }
 
@@ -404,7 +388,7 @@ mod tests {
 
     let read_comment = Comment::read(&conn, inserted_comment.id).unwrap();
     let updated_comment = Comment::update(&conn, inserted_comment.id, &comment_form).unwrap();
-    let like_removed = CommentLike::remove(&conn, &comment_like_form).unwrap();
+    let like_removed = CommentLike::remove(&conn, inserted_user.id, inserted_comment.id).unwrap();
     let saved_removed = CommentSaved::unsave(&conn, &comment_saved_form).unwrap();
     let num_deleted = Comment::delete(&conn, inserted_comment.id).unwrap();
     Comment::delete(&conn, inserted_child_comment.id).unwrap();
