@@ -12,11 +12,16 @@ use crate::{
   apub::fetcher::search_by_apub_id,
   blocking,
   version,
-  websocket::{server::SendAllMessage, UserOperation, WebsocketInfo},
+  websocket::{
+    server::{GetUsersOnline, SendAllMessage},
+    UserOperation,
+    WebsocketInfo,
+  },
   DbPool,
   LemmyError,
 };
 use actix_web::client::Client;
+use anyhow::Context;
 use lemmy_db::{
   category::*,
   comment_view::*,
@@ -34,7 +39,7 @@ use lemmy_db::{
   SearchType,
   SortType,
 };
-use lemmy_utils::settings::Settings;
+use lemmy_utils::{location_info, settings::Settings};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -414,13 +419,8 @@ impl Perform for GetSite {
 
     let banned = blocking(pool, move |conn| UserView::banned(conn)).await??;
 
-    let online = if let Some(_ws) = websocket_info {
-      // TODO
-      1
-    // let fut = async {
-    //   ws.chatserver.send(GetUsersOnline).await.unwrap()
-    // };
-    // Runtime::new().unwrap().block_on(fut)
+    let online = if let Some(ws) = websocket_info {
+      ws.chatserver.send(GetUsersOnline).await.unwrap_or(1)
     } else {
       0
     };
@@ -655,7 +655,7 @@ impl Perform for TransferSite {
     let creator_index = admins
       .iter()
       .position(|r| r.id == site_view.creator_id)
-      .unwrap();
+      .context(location_info!())?;
     let creator_user = admins.remove(creator_index);
     admins.insert(0, creator_user);
 
