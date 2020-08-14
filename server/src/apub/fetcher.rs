@@ -18,7 +18,7 @@ use activitystreams::{base::BaseExt, collection::OrderedCollection, object::Note
 use actix_web::client::Client;
 use anyhow::{anyhow, Context};
 use chrono::NaiveDateTime;
-use diesel::{result::Error::NotFound, PgConnection};
+use diesel::result::Error::NotFound;
 use lemmy_db::{
   comment::{Comment, CommentForm},
   comment_view::CommentView,
@@ -158,7 +158,7 @@ pub async fn search_by_apub_id(
     SearchAcceptedObjects::Page(p) => {
       let post_form = PostForm::from_apub(&p, client, pool, Some(query_url)).await?;
 
-      let p = blocking(pool, move |conn| upsert_post(&post_form, conn)).await??;
+      let p = blocking(pool, move |conn| Post::upsert(conn, &post_form)).await??;
       response.posts = vec![blocking(pool, move |conn| PostView::read(conn, p.id, None)).await??];
 
       response
@@ -166,7 +166,7 @@ pub async fn search_by_apub_id(
     SearchAcceptedObjects::Comment(c) => {
       let comment_form = CommentForm::from_apub(&c, client, pool, Some(query_url)).await?;
 
-      let c = blocking(pool, move |conn| upsert_comment(&comment_form, conn)).await??;
+      let c = blocking(pool, move |conn| Comment::upsert(conn, &comment_form)).await??;
       response.comments =
         vec![blocking(pool, move |conn| CommentView::read(conn, c.id, None)).await??];
 
@@ -325,7 +325,9 @@ async fn fetch_remote_community(
   let outbox =
     fetch_remote_object::<OrderedCollection>(client, &community.get_outbox_url()?).await?;
   let outbox_items = outbox.items().context(location_info!())?.clone();
-  for o in outbox_items.many().context(location_info!())? {
+  let outbox_items = outbox_items.many().context(location_info!())?;
+  let outbox_items = outbox_items[0..20].to_vec();
+  for o in outbox_items {
     let page = PageExt::from_any_base(o)?.context(location_info!())?;
     let post = PostForm::from_apub(&page, client, pool, None).await?;
     let post_ap_id = post.ap_id.clone();
@@ -339,15 +341,6 @@ async fn fetch_remote_community(
   }
 
   Ok(community)
-}
-
-fn upsert_post(post_form: &PostForm, conn: &PgConnection) -> Result<Post, LemmyError> {
-  let existing = Post::read_from_apub_id(conn, &post_form.ap_id);
-  match existing {
-    Err(NotFound {}) => Ok(Post::create(conn, &post_form)?),
-    Ok(p) => Ok(Post::update(conn, p.id, &post_form)?),
-    Err(e) => Err(e.into()),
-  }
 }
 
 pub async fn get_or_fetch_and_insert_post(
@@ -372,15 +365,6 @@ pub async fn get_or_fetch_and_insert_post(
 
       Ok(post)
     }
-    Err(e) => Err(e.into()),
-  }
-}
-
-fn upsert_comment(comment_form: &CommentForm, conn: &PgConnection) -> Result<Comment, LemmyError> {
-  let existing = Comment::read_from_apub_id(conn, &comment_form.ap_id);
-  match existing {
-    Err(NotFound {}) => Ok(Comment::create(conn, &comment_form)?),
-    Ok(p) => Ok(Comment::update(conn, p.id, &comment_form)?),
     Err(e) => Err(e.into()),
   }
 }
