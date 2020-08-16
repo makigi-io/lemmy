@@ -144,10 +144,10 @@ export class UserDetails extends Component<UserDetailsProps, UserDetailsState> {
     }
 
     return (
-      <div>
+      <div className="karabin-content">
         {combined.map(i => (
           <>
-            <div>
+            <div className="karabin-row">
               {i.type === 'posts' ? (
                 <PostListing
                   key={(i.data as Post).id}
@@ -194,17 +194,19 @@ export class UserDetails extends Component<UserDetailsProps, UserDetailsState> {
 
   posts() {
     return (
-      <div>
+      <div class="karabin-content">
         {this.state.posts.map(post => (
           <>
-            <PostListing
-              post={post}
-              admins={this.props.admins}
-              showCommunity
-              enableDownvotes={this.props.enableDownvotes}
-              enableNsfw={this.props.enableNsfw}
-            />
-            <hr class="my-3" />
+            <div className="karabin-row">
+              <PostListing
+                post={post}
+                admins={this.props.admins}
+                showCommunity
+                enableDownvotes={this.props.enableDownvotes}
+                enableNsfw={this.props.enableNsfw}
+              />
+              <hr class="my-3" />
+            </div>
           </>
         ))}
       </div>
