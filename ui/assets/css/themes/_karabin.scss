@@ -2,10 +2,10 @@
 .karabin-content .karabin-row {
     padding: 15px 0;
 }
-
 .karabin-content .karabin-row:nth-of-type(even) {
     background: #2b2b2b;
 }
 .karabin-content .karabin-row hr {
     margin:0 !important;
+    display: none;
 }
