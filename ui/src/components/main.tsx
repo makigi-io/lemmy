@@ -455,19 +455,6 @@ export class Main extends Component<any, MainState> {
           <sup class="ml-1">io</sup>
         </h5>
         <p class="mb-4 small">
-          <T i18nKey="landing_1">
-            <strong>#</strong>
-            <a href="https://board.karab.in">#</a>
-          </T>
-        </p>
-        {/*
-        <p class="mb-4 small">
-          <T i18nKey="landing_2">
-            <a href="https://mastodon.karab.in">mastodon.karab.in</a>
-          </T>
-        </p>
-        */}
-        <p class="mb-0 small">
           <T i18nKey="landing_3">
             #<a href="https://github.com/makigi-io/makigi">#</a>
             <a href="https://en.wikipedia.org/wiki/Fediverse">#</a>
@@ -485,6 +472,19 @@ export class Main extends Component<any, MainState> {
             <a href="https://karab.in">#</a>
           </T>
         </p>
+        <p class="mb-0 small">
+          <T i18nKey="landing_1">
+            <strong>#</strong>
+            <a href="https://board.karab.in">#</a>
+          </T>
+        </p>
+        {/*
+        <p class="mb-4 small">
+          <T i18nKey="landing_2">
+            <a href="https://mastodon.karab.in">mastodon.karab.in</a>
+          </T>
+        </p>
+        */}
       </div>
     );
   }
