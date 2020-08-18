@@ -97,7 +97,10 @@ impl Comment {
     comment.filter(ap_id.eq(object_id)).first::<Self>(conn)
   }
 
-  pub fn permadelete_for_creator(conn: &PgConnection, for_creator_id: i32) -> Result<Vec<Self>, Error> {
+  pub fn permadelete_for_creator(
+    conn: &PgConnection,
+    for_creator_id: i32,
+  ) -> Result<Vec<Self>, Error> {
     use crate::schema::comment::dsl::*;
     diesel::update(comment.filter(creator_id.eq(for_creator_id)))
       .set((
@@ -159,10 +162,7 @@ impl Comment {
       .get_result::<Self>(conn)
   }
 
-  pub fn upsert(
-    conn: &PgConnection,
-    comment_form: &CommentForm,
-  ) -> Result<Self, Error> {
+  pub fn upsert(conn: &PgConnection, comment_form: &CommentForm) -> Result<Self, Error> {
     let existing = Self::read_from_apub_id(conn, &comment_form.ap_id);
     match existing {
       Err(NotFound {}) => Ok(Self::create(conn, &comment_form)?),
