@@ -293,5 +293,6 @@
     "none_found": "Nie znaleziono.",
     "click_to_delete_picture": "Kliknij aby usunąć zdjęcie",
     "picture_deleted": "Zdjęcie usunięte.",
-    "icon": "Icon"
+    "icon": "Icon",
+    "remove_posts_comments": "Usuń wszystkie posty i komentarze"
 }
