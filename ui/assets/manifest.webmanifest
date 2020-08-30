@@ -1,6 +1,6 @@
 {
-  "name": "Lemmy",
-  "description": "A link aggregator for the fediverse",
+  "name": "Karabn",
+  "description": "Agregator treści przeznaczony dla fediverse",
   "start_url": "/",
   "display": "minimal-ui",
   "background_color": "#222222",
