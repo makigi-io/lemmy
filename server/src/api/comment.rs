@@ -11,7 +11,7 @@ use crate::{
   apub::{ApubLikeableType, ApubObjectType},
   blocking,
   websocket::{
-    server::{JoinCommunityRoom, SendComment},
+    messages::{JoinCommunityRoom, SendComment},
     UserOperation,
   },
   ConnectionId,
@@ -146,7 +146,7 @@ impl Perform for CreateComment {
       read: None,
       published: None,
       updated: None,
-      ap_id: "http://fake.com".into(),
+      ap_id: None,
       local: true,
     };
 
