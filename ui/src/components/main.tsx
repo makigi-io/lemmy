@@ -539,6 +539,10 @@ export class Main extends Component<any, MainState> {
         <span class="mr-3">
           <ListingTypeSelect
             type_={this.state.listingType}
+            showLocal={
+              this.state.siteRes.federated_instances &&
+              this.state.siteRes.federated_instances.length > 0
+            }
             onChange={this.handleListingTypeChange}
           />
         </span>
