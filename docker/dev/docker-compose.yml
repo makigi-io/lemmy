@@ -3,15 +3,17 @@ version: '3.3'
 services:
 
   lemmy:
-    image: lemmy-dev:latest
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile
     ports:
       - "8536:8536"
     restart: always
     environment:
-      - RUST_LOG=debug
+      - RUST_LOG=error
     volumes:
       - ../lemmy.hjson:/config/config.hjson
-    depends_on: 
+    depends_on:
       - pictrs
       - postgres
       - iframely
@@ -22,16 +24,16 @@ services:
       # use a different port so it doesnt conflict with postgres running on the host
       - "5433:5432"
     environment:
-      - POSTGRES_USER=lemmy
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=lemmy
+      - POSTGRES_USER=makigi
+      - POSTGRES_PASSWORD=fnDxK91Y3qFOAOWdY
+      - POSTGRES_DB=makigi
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
     restart: always
 
   pictrs:
     image: asonix/pictrs:v0.1.13-r0
-    ports: 
+    ports:
       - "8537:8080"
     user: 991:991
     volumes:
