@@ -1,10 +1,8 @@
-use crate::{
-  api::{comment::*, community::*, post::*, site::*, user::*, Perform},
-  rate_limit::RateLimit,
-  LemmyContext,
-};
+use crate::{api::Perform, LemmyContext};
 use actix_web::{error::ErrorBadRequest, *};
-use serde::Serialize;
+use lemmy_api_structs::{comment::*, community::*, post::*, site::*, user::*};
+use lemmy_rate_limit::RateLimit;
+use serde::Deserialize;
 
 pub fn config(cfg: &mut web::ServiceConfig, rate_limit: &RateLimit) {
   cfg.service(
@@ -189,22 +187,22 @@ where
   Ok(res)
 }
 
-async fn route_get<Data>(
+async fn route_get<'a, Data>(
   data: web::Query<Data>,
   context: web::Data<LemmyContext>,
 ) -> Result<HttpResponse, Error>
 where
-  Data: Serialize + Send + 'static + Perform,
+  Data: Deserialize<'a> + Send + 'static + Perform,
 {
   perform::<Data>(data.0, context).await
 }
 
-async fn route_post<Data>(
+async fn route_post<'a, Data>(
   data: web::Json<Data>,
   context: web::Data<LemmyContext>,
 ) -> Result<HttpResponse, Error>
 where
-  Data: Serialize + Send + 'static + Perform,
+  Data: Deserialize<'a> + Send + 'static + Perform,
 {
   perform::<Data>(data.0, context).await
 }

@@ -1,18 +1,10 @@
 use crate::{
-  api::{comment::*, community::*, post::*, site::*, user::*, APIError},
-  rate_limit::RateLimit,
   websocket::{
     handlers::{do_user_operation, to_json_string, Args},
     messages::*,
     UserOperation,
   },
-  CommunityId,
-  ConnectionId,
-  IPAddr,
   LemmyContext,
-  LemmyError,
-  PostId,
-  UserId,
 };
 use actix::prelude::*;
 use anyhow::Context as acontext;
@@ -21,7 +13,18 @@ use diesel::{
   r2d2::{ConnectionManager, Pool},
   PgConnection,
 };
-use lemmy_utils::location_info;
+use lemmy_api_structs::{comment::*, community::*, post::*, site::*, user::*};
+use lemmy_rate_limit::RateLimit;
+use lemmy_utils::{
+  location_info,
+  APIError,
+  CommunityId,
+  ConnectionId,
+  IPAddr,
+  LemmyError,
+  PostId,
+  UserId,
+};
 use rand::rngs::ThreadRng;
 use reqwest::Client;
 use serde::Serialize;
