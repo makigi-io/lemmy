@@ -1,17 +1,21 @@
 #[macro_use]
-pub extern crate lazy_static;
-pub extern crate comrak;
-pub extern crate lettre;
-pub extern crate lettre_email;
-pub extern crate openssl;
-pub extern crate rand;
-pub extern crate regex;
-pub extern crate serde_json;
-pub extern crate url;
+extern crate lazy_static;
+extern crate actix_web;
+extern crate anyhow;
+extern crate comrak;
+extern crate lettre;
+extern crate lettre_email;
+extern crate openssl;
+extern crate rand;
+extern crate regex;
+extern crate serde_json;
+extern crate thiserror;
+extern crate url;
 
 pub mod settings;
 
 use crate::settings::Settings;
+use actix_web::dev::ConnectionInfo;
 use chrono::{DateTime, FixedOffset, Local, NaiveDateTime};
 use itertools::Itertools;
 use lettre::{
@@ -29,7 +33,14 @@ use openssl::{pkey::PKey, rsa::Rsa};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use regex::{Regex, RegexBuilder};
 use std::io::{Error, ErrorKind};
+use thiserror::Error;
 use url::Url;
+
+pub type ConnectionId = usize;
+pub type PostId = i32;
+pub type CommunityId = i32;
+pub type UserId = i32;
+pub type IPAddr = String;
 
 #[macro_export]
 macro_rules! location_info {
@@ -42,6 +53,42 @@ macro_rules! location_info {
     )
   };
 }
+
+#[derive(Debug, Error)]
+#[error("{{\"error\":\"{message}\"}}")]
+pub struct APIError {
+  pub message: String,
+}
+
+impl APIError {
+  pub fn err(msg: &str) -> Self {
+    APIError {
+      message: msg.to_string(),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct LemmyError {
+  inner: anyhow::Error,
+}
+
+impl<T> From<T> for LemmyError
+where
+  T: Into<anyhow::Error>,
+{
+  fn from(t: T) -> Self {
+    LemmyError { inner: t.into() }
+  }
+}
+
+impl std::fmt::Display for LemmyError {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    self.inner.fmt(f)
+  }
+}
+
+impl actix_web::error::ResponseError for LemmyError {}
 
 pub fn naive_from_unix(time: i64) -> NaiveDateTime {
   NaiveDateTime::from_timestamp(time, 0)
@@ -348,4 +395,14 @@ pub fn make_apub_endpoint(endpoint_type: EndpointType, name: &str) -> Url {
     name
   ))
   .unwrap()
+}
+
+pub fn get_ip(conn_info: &ConnectionInfo) -> String {
+  conn_info
+    .realip_remote_addr()
+    .unwrap_or("127.0.0.1:12345")
+    .split(':')
+    .next()
+    .unwrap_or("127.0.0.1")
+    .to_string()
 }

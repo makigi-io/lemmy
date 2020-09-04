@@ -13,8 +13,6 @@ RUN yarn build
 FROM ekidd/rust-musl-builder:nightly-2020-05-07 as rust
 
 # Cache deps
-
-# Cache deps
 WORKDIR /app
 RUN sudo chown -R rust:rust .
 RUN USER=root cargo new server
@@ -22,12 +20,18 @@ RUN USER=root cargo new server
 # Install cargo-build-deps
 RUN cargo install --git https://github.com/romac/cargo-build-deps.git
 WORKDIR /app/server
-RUN mkdir -p lemmy_db/src/ lemmy_utils/src/
+RUN mkdir -p lemmy_db/src/ \
+      lemmy_utils/src/ \
+      lemmy_api_structs/src/ \
+      lemmy_rate_limit/src/ \
+      lemmy
 
 # Copy the cargo tomls
 COPY server/Cargo.toml server/Cargo.lock ./
 COPY server/lemmy_db ./lemmy_db
 COPY server/lemmy_utils ./lemmy_utils
+COPY server/lemmy_api_structs ./lemmy_api_structs
+COPY server/lemmy_rate_limit ./lemmy_rate_limit
 RUN mkdir -p ./src/bin \
    && echo 'fn main() { println!("Dummy") }' > ./src/bin/main.rs
 RUN cargo build --release
@@ -35,6 +39,8 @@ RUN find target/release -type f -name "$(echo "lemmy_server" | tr '-' '_')*" -ex
 COPY server/src ./src/
 COPY server/lemmy_db/src ./lemmy_db/src/
 COPY server/lemmy_utils/src/ ./lemmy_utils/src/
+COPY server/lemmy_api_structs/src/ ./lemmy_api_structs/src/
+COPY server/lemmy_rate_limit/src/ ./lemmy_rate_limit/src/
 COPY server/migrations ./migrations/
 
 # Build for debug

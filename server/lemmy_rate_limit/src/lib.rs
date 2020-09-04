@@ -1,8 +1,17 @@
-use super::IPAddr;
-use crate::{get_ip, LemmyError};
+#[macro_use]
+extern crate strum_macros;
+extern crate actix_web;
+extern crate futures;
+extern crate log;
+extern crate tokio;
+
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use futures::future::{ok, Ready};
-use lemmy_utils::settings::{RateLimitConfig, Settings};
+use lemmy_utils::{
+  get_ip,
+  settings::{RateLimitConfig, Settings},
+  LemmyError,
+};
 use rate_limiter::{RateLimitType, RateLimiter};
 use std::{
   future::Future,
